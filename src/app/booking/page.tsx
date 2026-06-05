@@ -366,60 +366,60 @@ function BookingContent() {
     setIsSubmitting(true);
     setError("");
 
+    // Generate WhatsApp URL dulu (synchronously, dari event klik user langsung)
+    const waNumber = formatWhatsAppNumber(settings.whatsapp_number);
+    const waMessage = encodeURIComponent(
+      `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\nTotal:\n${formatPrice(totalPrice)}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
+    );
+    const waUrl = `https://wa.me/${waNumber}?text=${waMessage}`;
+
+    // Buka WhatsApp SEKARANG (synchronously, langsung dari event klik user)
+    // Ini pasti tidak diblokir popup blocker di HP maupun desktop
+    window.open(waUrl, '_blank');
+
+    // Generate booking code
+    const code = `KG-${selectedDate.replace(/-/g, "")}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, "0")}`;
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + settings.booking_expiration_minutes);
+
+    const bookingData = {
+      booking_code: code,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      device_id: selectedDevice.id,
+      booking_date: selectedDate,
+      start_time: selectedStartTime,
+      end_time: endTime,
+      duration_hours: selectedDuration,
+      package_type: selectedPackage,
+      payment_type: selectedPayment,
+      payment_amount: selectedPayment === "DP" ? selectedPricing?.hourly_price || totalPrice : totalPrice,
+      total_price: totalPrice,
+      status: "WAITING_PAYMENT",
+      expires_at: expiresAt.toISOString(),
+    };
+
+    // Simpan booking di background
+    let newBooking: Booking | null = null;
     try {
-      // Generate booking code
-      const code = `KG-${selectedDate.replace(/-/g, "")}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, "0")}`;
-      const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + settings.booking_expiration_minutes);
-
-      const bookingData = {
-        booking_code: code,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        device_id: selectedDevice.id,
-        booking_date: selectedDate,
-        start_time: selectedStartTime,
-        end_time: endTime,
-        duration_hours: selectedDuration,
-        package_type: selectedPackage,
-        payment_type: selectedPayment,
-        payment_amount: selectedPayment === "DP" ? selectedPricing?.hourly_price || totalPrice : totalPrice,
-        total_price: totalPrice,
-        status: "WAITING_PAYMENT",
-        expires_at: expiresAt.toISOString(),
-      };
-
-      // Try to insert to Supabase
-      let newBooking: Booking | null = null;
-      try {
-        const { data } = await supabase.from("bookings").insert(bookingData).select().single();
-        if (data) newBooking = data;
-      } catch {
-        // Fallback: create local booking object
-        newBooking = {
-          id: crypto.randomUUID(),
-          ...bookingData,
-          notes: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as Booking;
-      }
-
-      if (newBooking) {
-        setBookingResult(newBooking);
-
-        // Open WhatsApp - redirect langsung untuk hindari popup blocker
-        const waNumber = formatWhatsAppNumber(settings.whatsapp_number);
-        const waMessage = encodeURIComponent(
-          `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\nTotal:\n${formatPrice(totalPrice)}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
-        );
-        window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
-      }
+      const { data } = await supabase.from("bookings").insert(bookingData).select().single();
+      if (data) newBooking = data;
     } catch {
-      setError("Gagal membuat booking. Silakan coba lagi.");
-    } finally {
-      setIsSubmitting(false);
+      // Fallback: tetap pakai data booking lokal
+      newBooking = {
+        id: crypto.randomUUID(),
+        ...bookingData,
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Booking;
     }
+
+    if (newBooking) {
+      setBookingResult(newBooking);
+    }
+
+    setIsSubmitting(false);
   };
 
   // Success state
