@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0F1117;
+  --background-secondary: #171923;
+  --background-card: #1F2330;
+  --accent-gold: #F5B700;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A1A1AA;
+  --status-available: #22C55E;
+  --status-waiting: #EAB308;
+  --status-booked: #EF4444;
+  --status-inuse: #8B5CF6;
+  --status-finished: #6B7280;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  min-height: 100%;
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Status Badge Colors */
+.badge-available {
+  background-color: var(--status-available);
+  color: #000;
+}
+
+.badge-waiting {
+  background-color: var(--status-waiting);
+  color: #000;
+}
+
+.badge-booked {
+  background-color: var(--status-booked);
+  color: #fff;
+}
+
+.badge-inuse {
+  background-color: var(--status-inuse);
+  color: #fff;
+}
+
+.badge-finished {
+  background-color: var(--status-finished);
+  color: #fff;
+}
+
+.badge-expired {
+  background-color: #4B5563;
+  color: #fff;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3F4452;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5F6472;
+}
