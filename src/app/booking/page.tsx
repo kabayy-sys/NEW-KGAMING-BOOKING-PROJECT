@@ -161,8 +161,10 @@ function BookingContent() {
     return dates;
   };
 
-  // Generate available time slots
-  const getAvailableSlots = useCallback(() => {
+  type SlotInfo = { time: string; status: "available" | "booked" | "pending" };
+
+  // Generate time slots with status (available/booked/pending) - all slots shown
+  const getTimeSlots = useCallback((): SlotInfo[] => {
     if (!selectedDate || !selectedDevice) return [];
 
     const hours = getDayHours();
@@ -172,27 +174,45 @@ function BookingContent() {
     const today = getTodayDate();
     const now = new Date();
 
-    return allSlots.filter((slot: string) => {
+    const slots: SlotInfo[] = [];
+
+    allSlots.forEach((slot: string) => {
+      // Skip past slots for today
       if (selectedDate === today) {
         const [slotH, slotM] = slot.split(":").map(Number);
         const slotMinutes = slotH * 60 + slotM;
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
-        if (slotMinutes <= nowMinutes) return false;
+        if (slotMinutes <= nowMinutes) return;
       }
 
-      // Check for conflicts with existing bookings
       const slotEnd = calculateEndTime(slot, 1);
-      const hasConflict = bookings.some((booking: Booking) => {
-        if (booking.device_id !== selectedDevice.id) return false;
-        if (booking.booking_date !== selectedDate) return false;
-        if (booking.status === "EXPIRED" || booking.status === "FINISHED" || booking.status === "REJECTED") return false;
+
+      // Check conflicts with existing bookings for this device+date
+      let slotStatus: "available" | "booked" | "pending" = "available";
+
+      for (const booking of bookings) {
+        if (booking.device_id !== selectedDevice.id) continue;
+        if (booking.booking_date !== selectedDate) continue;
+        if (booking.status === "EXPIRED" || booking.status === "FINISHED" || booking.status === "REJECTED") continue;
 
         // Check time overlap
-        return slot < booking.end_time && slotEnd > booking.start_time;
-      });
+        const hasOverlap = slot < booking.end_time && slotEnd > booking.start_time;
+        if (!hasOverlap) continue;
 
-      return !hasConflict;
+        // Determine status based on booking status
+        if (booking.status === "BOOKED" || booking.status === "IN_USE") {
+          slotStatus = "booked";
+          break; // Booked takes priority
+        }
+        if (booking.status === "PENDING" || booking.status === "WAITING_PAYMENT") {
+          slotStatus = "pending"; // Could be overwritten by booked later
+        }
+      }
+
+      slots.push({ time: slot, status: slotStatus });
     });
+
+    return slots;
   }, [selectedDate, selectedDevice, bookings, getDayHours]);
 
   // Generate duration options
@@ -584,24 +604,51 @@ function BookingContent() {
             {selectedDevice?.name} - {selectedDate ? formatDate(selectedDate) : ""}
           </p>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {getAvailableSlots().map((slot) => (
-              <button
-                key={slot}
-                onClick={() => handleTimeSelect(slot)}
-                className="py-3 rounded-lg text-center font-medium transition-all"
-                style={{
-                  backgroundColor:
-                    selectedStartTime === slot ? "#F5B700" : "#1F2330",
-                  color: selectedStartTime === slot ? "#000" : "#FFF",
-                  border: "1px solid",
-                  borderColor:
-                    selectedStartTime === slot ? "#F5B700" : "#3F4452",
-                }}
-              >
-                {slot}
-              </button>
-            ))}
-            {getAvailableSlots().length === 0 && (
+            {getTimeSlots().map((slot) => {
+              const isDisabled = slot.status !== "available";
+              return (
+                <button
+                  key={slot.time}
+                  onClick={() => {
+                    if (!isDisabled) handleTimeSelect(slot.time);
+                  }}
+                  disabled={isDisabled}
+                  className="py-3 rounded-lg text-center font-medium transition-all disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor:
+                      selectedStartTime === slot.time
+                        ? "#F5B700"
+                        : slot.status === "booked"
+                        ? "#EF444420"
+                        : slot.status === "pending"
+                        ? "#EAB30820"
+                        : "#1F2330",
+                    color:
+                      slot.status === "booked"
+                        ? "#EF4444"
+                        : slot.status === "pending"
+                        ? "#EAB308"
+                        : selectedStartTime === slot.time
+                        ? "#000"
+                        : "#FFF",
+                    border: "1px solid",
+                    borderColor:
+                      selectedStartTime === slot.time
+                        ? "#F5B700"
+                        : slot.status === "booked"
+                        ? "#EF4444"
+                        : slot.status === "pending"
+                        ? "#EAB308"
+                        : "#3F4452",
+                  }}
+                >
+                  {slot.time}
+                  {slot.status === "booked" && <span className="block text-[10px]">🔴 Booked</span>}
+                  {slot.status === "pending" && <span className="block text-[10px]">🟡 Pending</span>}
+                </button>
+              );
+            })}
+            {getTimeSlots().length === 0 && (
               <p className="col-span-full text-center py-8" style={{ color: "#A1A1AA" }}>
                 Tidak ada slot tersedia untuk tanggal ini
               </p>

@@ -88,9 +88,6 @@ const categoryLabels: Record<string, string> = {
 export default function HomePage() {
   const [devices, setDevices] = useState<Device[]>(staticDevices);
   const [loading, setLoading] = useState(true);
-  const [deviceStatuses, setDeviceStatuses] = useState<
-    Record<string, string>
-  >({});
 
   useEffect(() => {
     async function fetchDevices() {
@@ -111,51 +108,8 @@ export default function HomePage() {
       }
     }
 
-    async function fetchStatuses() {
-      try {
-        const today = getTodayDate();
-        const { data: bookings } = await supabase
-          .from("bookings")
-          .select("device_id, status")
-          .eq("booking_date", today)
-          .in("status", ["WAITING_PAYMENT", "BOOKED", "IN_USE"]);
-
-        if (bookings) {
-          const statusMap: Record<string, string> = {};
-          bookings.forEach((b: { device_id: string; status: string }) => {
-            if (
-              !statusMap[b.device_id] ||
-              b.status === "IN_USE" ||
-              b.status === "BOOKED"
-            ) {
-              statusMap[b.device_id] = b.status;
-            }
-          });
-          setDeviceStatuses(statusMap);
-        }
-      } catch {
-        // Ignore errors
-      }
-    }
-
     fetchDevices();
-    fetchStatuses();
   }, []);
-
-  const getStatusInfo = (deviceId: string) => {
-    const status = deviceStatuses[deviceId];
-    if (!status) return { label: "Available", color: "#22C55E" };
-    switch (status) {
-      case "WAITING_PAYMENT":
-        return { label: "Waiting Payment", color: "#EAB308" };
-      case "BOOKED":
-        return { label: "Booked", color: "#EF4444" };
-      case "IN_USE":
-        return { label: "In Use", color: "#8B5CF6" };
-      default:
-        return { label: "Available", color: "#22C55E" };
-    }
-  };
 
   // Group devices by category
   const regularDevices = devices.filter((d) => d.category === "REGULAR");
@@ -216,7 +170,6 @@ export default function HomePage() {
                 title="Reguler"
                 icon="🎮"
                 devices={regularDevices}
-                getStatusInfo={getStatusInfo}
               />
             )}
 
@@ -226,7 +179,6 @@ export default function HomePage() {
                 title="VIP 1"
                 icon="🌟"
                 devices={vip1Devices}
-                getStatusInfo={getStatusInfo}
               />
             )}
 
@@ -236,7 +188,6 @@ export default function HomePage() {
                 title="VIP 2"
                 icon="👑"
                 devices={vip2Devices}
-                getStatusInfo={getStatusInfo}
               />
             )}
           </>
@@ -250,12 +201,10 @@ function DeviceCategorySection({
   title,
   icon,
   devices,
-  getStatusInfo,
 }: {
   title: string;
   icon: string;
   devices: Device[];
-  getStatusInfo: (id: string) => { label: string; color: string };
 }) {
   return (
     <div className="mb-6">
@@ -264,61 +213,46 @@ function DeviceCategorySection({
       </h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {devices.map((device) => {
-          const statusInfo = getStatusInfo(device.id);
-          const isAvailable = statusInfo.label === "Available";
-
-          return (
-            <div
-              key={device.id}
-              className="rounded-xl p-4 border border-gray-800"
-              style={{ backgroundColor: "#1F2330" }}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="font-semibold text-white">{device.name}</p>
-                  <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-                    {icon} {title}
-                  </p>
-                </div>
-                <span
-                  className="text-xs px-2 py-1 rounded-full font-medium"
-                  style={{
-                    backgroundColor: statusInfo.color + "20",
-                    color: statusInfo.color,
-                  }}
-                >
-                  {statusInfo.label}
-                </span>
+        {devices.map((device) => (
+          <div
+            key={device.id}
+            className="rounded-xl p-4 border border-gray-800"
+            style={{ backgroundColor: "#1F2330" }}
+          >
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <p className="font-semibold text-white">{device.name}</p>
+                <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
+                  {icon} {title}
+                </p>
               </div>
-
-              <p className="text-lg font-bold text-white mb-3">
-                {formatPrice(device.hourly_price)}
-                <span className="text-sm font-normal" style={{ color: "#A1A1AA" }}>
-                  /Jam
-                </span>
-              </p>
-
-              {isAvailable ? (
-                <Link
-                  href={`/booking?device=${device.id}`}
-                  className="block w-full py-2 rounded-lg text-center font-medium transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#F5B700", color: "#000" }}
-                >
-                  Booking
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="w-full py-2 rounded-lg text-center font-medium cursor-not-allowed"
-                  style={{ backgroundColor: "#3F4452", color: "#6B7280" }}
-                >
-                  Tidak Tersedia
-                </button>
-              )}
+              <span
+                className="text-xs px-2 py-1 rounded-full font-medium"
+                style={{
+                  backgroundColor: "#22C55E20",
+                  color: "#22C55E",
+                }}
+              >
+                Ready
+              </span>
             </div>
-          );
-        })}
+
+            <p className="text-lg font-bold text-white mb-3">
+              {formatPrice(device.hourly_price)}
+              <span className="text-sm font-normal" style={{ color: "#A1A1AA" }}>
+                /Jam
+              </span>
+            </p>
+
+            <Link
+              href={`/booking?device=${device.id}`}
+              className="block w-full py-2 rounded-lg text-center font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#F5B700", color: "#000" }}
+            >
+              Booking
+            </Link>
+          </div>
+        ))}
       </div>
     </div>
   );
