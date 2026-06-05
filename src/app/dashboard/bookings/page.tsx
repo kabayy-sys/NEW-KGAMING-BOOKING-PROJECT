@@ -49,17 +49,24 @@ export default function BookingsPage() {
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from("bookings")
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq("id", bookingId);
+
+      if (error) {
+        console.error("Failed to update status:", error.message);
+        return;
+      }
 
       setBookings((prev) =>
         prev.map((b) =>
           b.id === bookingId ? { ...b, status: newStatus as any } : b
         )
       );
-    } catch {}
+    } catch (err) {
+      console.error("Update error:", err);
+    }
   };
 
   const getDeviceName = (deviceId: string) => {
