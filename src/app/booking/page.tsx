@@ -101,7 +101,6 @@ function BookingContent() {
   const [selectedPackage, setSelectedPackage] = useState<"PROMO" | "NORMAL" | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<"DP" | "FULL" | null>(null);
   const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingResult, setBookingResult] = useState<Booking | null>(null);
@@ -373,7 +372,7 @@ function BookingContent() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedDevice || !selectedDate || !selectedStartTime || !selectedDuration || !selectedPackage || !selectedPayment || !customerName || !customerPhone) {
+    if (!selectedDevice || !selectedDate || !selectedStartTime || !selectedDuration || !selectedPackage || !selectedPayment || !customerName) {
       setError("Mohon lengkapi semua data");
       return;
     }
@@ -410,7 +409,7 @@ function BookingContent() {
     const bookingData = {
       booking_code: code,
       customer_name: customerName,
-      customer_phone: customerPhone,
+      customer_phone: "",
       device_id: selectedDevice.id,
       booking_date: selectedDate,
       start_time: selectedStartTime,
@@ -479,14 +478,21 @@ function BookingContent() {
               A/N: {settings.bank_account_holder}
             </p>
             <div className="mt-4 pt-4 border-t border-gray-700">
-              <p style={{ color: "#A1A1AA" }}>Total Pembayaran:</p>
+              <p style={{ color: "#A1A1AA" }}>
+                Total Pembayaran ({selectedPayment === "DP" ? "DP" : "Lunas"}):
+              </p>
               <p
                 className="text-2xl font-bold"
                 style={{ color: "#F5B700" }}
               >
-                {formatPrice(totalPrice)}
+                {selectedPayment === "DP" ? formatPrice(selectedPricing?.hourly_price || totalPrice) : formatPrice(totalPrice)}
               </p>
             </div>
+            {selectedPayment === "DP" && (
+              <p className="mt-2 text-sm" style={{ color: "#EAB308" }}>
+                ⚠️ Lakukan pelunasan saat datang ke K Gaming X Cafe
+              </p>
+            )}
             <p className="mt-2 text-sm" style={{ color: "#EAB308" }}>
               ⏱ Batas pembayaran {settings.booking_expiration_minutes} menit
             </p>
@@ -832,14 +838,6 @@ function BookingContent() {
               className="w-full px-4 py-3 rounded-lg mb-3 text-white placeholder-gray-500 outline-none"
               style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
             />
-            <input
-              type="tel"
-              placeholder="Nomor WhatsApp"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-500 outline-none"
-              style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
-            />
           </div>
 
           {/* Ringkasan */}
@@ -882,11 +880,11 @@ function BookingContent() {
           {/* Submit Button */}
           <button
             onClick={handleSubmit}
-            disabled={!agreedToTerms || !customerName || !customerPhone || isSubmitting}
+            disabled={!agreedToTerms || !customerName || isSubmitting}
             className="w-full py-4 rounded-lg font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              backgroundColor: agreedToTerms && customerName && customerPhone ? "#25D366" : "#3F4452",
-              color: agreedToTerms && customerName && customerPhone ? "#000" : "#6B7280",
+              backgroundColor: agreedToTerms && customerName ? "#25D366" : "#3F4452",
+              color: agreedToTerms && customerName ? "#000" : "#6B7280",
             }}
           >
             {isSubmitting ? "Memproses..." : "Lanjut ke WhatsApp"}
