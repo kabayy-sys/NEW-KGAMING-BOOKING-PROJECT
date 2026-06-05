@@ -137,16 +137,6 @@ function BookingContent() {
 
   const totalPrice = calculatePrice();
 
-  // Build WhatsApp message
-  const buildWaUrl = useCallback(() => {
-    if (!bookingResult || !selectedDevice) return "#";
-    const waNumber = formatWhatsAppNumber(settings.whatsapp_number);
-    const waMessage = encodeURIComponent(
-      `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\nTotal:\n${formatPrice(totalPrice)}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
-    );
-    return `https://wa.me/${waNumber}?text=${waMessage}`;
-  }, [bookingResult, selectedDevice, customerName, selectedDate, selectedStartTime, endTime, selectedDuration, selectedPackage, selectedPayment, totalPrice, settings.whatsapp_number]);
-
   // Get business hours for selected date
   const getDayHours = useCallback(() => {
     if (!selectedDate) return { open: "10:00", close: "01:00" };
@@ -417,7 +407,13 @@ function BookingContent() {
 
       if (newBooking) {
         setBookingResult(newBooking);
-        // No auto-redirect! User will click the WA button manually
+
+        // Open WhatsApp - redirect langsung untuk hindari popup blocker
+        const waNumber = formatWhatsAppNumber(settings.whatsapp_number);
+        const waMessage = encodeURIComponent(
+          `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\nTotal:\n${formatPrice(totalPrice)}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
+        );
+        window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
       }
     } catch {
       setError("Gagal membuat booking. Silakan coba lagi.");
@@ -428,25 +424,21 @@ function BookingContent() {
 
   // Success state
   if (bookingResult) {
-    const waUrl = buildWaUrl();
-
     return (
       <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full">
-          <div className="text-center">
-            <div className="text-6xl mb-4">✅</div>
-            <h1 className="text-2xl font-bold mb-2" style={{ color: "#22C55E" }}>
-              Booking Berhasil!
-            </h1>
-            <p className="mb-2" style={{ color: "#A1A1AA" }}>
-              Kode Booking:{" "}
-              <span className="font-bold text-white">{bookingResult.booking_code}</span>
-            </p>
-            <p className="mb-6" style={{ color: "#A1A1AA" }}>
-              Status:{" "}
-              <span className="text-yellow-400 font-semibold">Waiting Payment</span>
-            </p>
-          </div>
+        <div className="max-w-md w-full text-center">
+          <div className="text-6xl mb-4">✅</div>
+          <h1 className="text-2xl font-bold mb-2" style={{ color: "#22C55E" }}>
+            Booking Berhasil!
+          </h1>
+          <p className="mb-2" style={{ color: "#A1A1AA" }}>
+            Kode Booking:{" "}
+            <span className="font-bold text-white">{bookingResult.booking_code}</span>
+          </p>
+          <p className="mb-6" style={{ color: "#A1A1AA" }}>
+            Status:{" "}
+            <span className="text-yellow-400 font-semibold">Waiting Payment</span>
+          </p>
 
           {/* Payment Info */}
           <div
@@ -475,20 +467,9 @@ function BookingContent() {
             </p>
           </div>
 
-          {/* WA Button */}
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full py-4 rounded-lg font-bold text-lg text-center mb-3 transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#25D366", color: "#000" }}
-          >
-            📲 Kirim Pesan ke WhatsApp
-          </a>
-
           <Link
             href="/"
-            className="block w-full py-3 rounded-lg font-semibold text-center text-black transition-opacity hover:opacity-90"
+            className="inline-block px-8 py-3 rounded-lg font-semibold text-black transition-opacity hover:opacity-90"
             style={{ backgroundColor: "#F5B700" }}
           >
             Kembali ke Beranda
