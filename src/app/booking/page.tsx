@@ -185,7 +185,7 @@ function BookingContent() {
       const hasConflict = bookings.some((booking: Booking) => {
         if (booking.device_id !== selectedDevice.id) return false;
         if (booking.booking_date !== selectedDate) return false;
-        if (booking.status === "EXPIRED" || booking.status === "FINISHED") return false;
+        if (booking.status === "EXPIRED" || booking.status === "FINISHED" || booking.status === "REJECTED") return false;
 
         // Check time overlap
         return slot < booking.end_time && slotEnd > booking.start_time;
@@ -273,7 +273,7 @@ function BookingContent() {
           .from("bookings")
           .select("*")
           .eq("booking_date", selectedDate)
-          .not("status", "in", '("EXPIRED","FINISHED")');
+          .not("status", "in", '("EXPIRED","FINISHED","REJECTED")');
 
         if (data) setBookings(data);
       } catch {}
@@ -442,7 +442,7 @@ function BookingContent() {
           </p>
           <p className="mb-6" style={{ color: "#A1A1AA" }}>
             Status:{" "}
-            <span className="text-yellow-400 font-semibold">Waiting Payment</span>
+            <span className="text-yellow-400 font-semibold">Menunggu Konfirmasi Staff</span>
           </p>
 
           {/* Payment Info */}
