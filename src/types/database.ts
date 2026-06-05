@@ -1,11 +1,13 @@
 export type DeviceCategory = 'REGULAR' | 'VIP1' | 'VIP2';
 
 export type BookingStatus =
+  | 'PENDING'
   | 'WAITING_PAYMENT'
   | 'BOOKED'
   | 'IN_USE'
   | 'FINISHED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'REJECTED';
 
 export type PackageType = 'PROMO' | 'NORMAL';
 

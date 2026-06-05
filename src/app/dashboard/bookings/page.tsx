@@ -68,11 +68,13 @@ export default function BookingsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "PENDING": return "#F97316";
       case "WAITING_PAYMENT": return "#EAB308";
       case "BOOKED": return "#EF4444";
       case "IN_USE": return "#8B5CF6";
       case "FINISHED": return "#6B7280";
       case "EXPIRED": return "#4B5563";
+      case "REJECTED": return "#991B1B";
       default: return "#6B7280";
     }
   };
@@ -83,7 +85,7 @@ export default function BookingsPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {["ALL", "WAITING_PAYMENT", "BOOKED", "IN_USE", "FINISHED", "EXPIRED"].map((f) => (
+          {["ALL", "PENDING", "WAITING_PAYMENT", "BOOKED", "IN_USE", "FINISHED", "EXPIRED", "REJECTED"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -142,6 +144,24 @@ export default function BookingsPage() {
 
               {/* Actions */}
               <div className="flex gap-2 mt-3 pt-3 border-t border-gray-800">
+                {booking.status === "PENDING" && (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange(booking.id, "BOOKED")}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                      style={{ backgroundColor: "#22C55E", color: "#000" }}
+                    >
+                      ✅ Setujui
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(booking.id, "REJECTED")}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                      style={{ backgroundColor: "#EF4444", color: "#FFF" }}
+                    >
+                      ❌ Tolak
+                    </button>
+                  </>
+                )}
                 {booking.status === "WAITING_PAYMENT" && (
                   <>
                     <button

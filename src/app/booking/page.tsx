@@ -366,10 +366,15 @@ function BookingContent() {
     setIsSubmitting(true);
     setError("");
 
+    // Hitung DP (harga 1 jam) atau Lunas (total)
+    const dpAmount = selectedPricing?.hourly_price || totalPrice;
+    const paymentLabel = selectedPayment === "DP" ? "DP" : "Lunas";
+    const paymentAmount = selectedPayment === "DP" ? dpAmount : totalPrice;
+
     // Generate WhatsApp URL dulu (synchronously, dari event klik user langsung)
     const waNumber = formatWhatsAppNumber(settings.whatsapp_number);
     const waMessage = encodeURIComponent(
-      `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\nTotal:\n${formatPrice(totalPrice)}\n\nTransfer ke:\n${settings.bank_name} - ${settings.bank_account_number}\na/n ${settings.bank_account_holder}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
+      `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\n${paymentLabel}:\n${formatPrice(paymentAmount)}\n\nTransfer ke:\n${settings.bank_name} - ${settings.bank_account_number}\na/n ${settings.bank_account_holder}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
     );
     const waUrl = `https://wa.me/${waNumber}?text=${waMessage}`;
 
@@ -395,7 +400,7 @@ function BookingContent() {
       payment_type: selectedPayment,
       payment_amount: selectedPayment === "DP" ? selectedPricing?.hourly_price || totalPrice : totalPrice,
       total_price: totalPrice,
-      status: "WAITING_PAYMENT",
+      status: "PENDING",
       expires_at: expiresAt.toISOString(),
     };
 
