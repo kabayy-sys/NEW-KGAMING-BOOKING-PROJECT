@@ -17,6 +17,7 @@ import {
   generateTimeSlots,
   getDayName,
   getTodayDate,
+  formatWhatsAppNumber,
 } from "@/lib/utils";
 import Link from "next/link";
 
@@ -407,11 +408,12 @@ function BookingContent() {
       if (newBooking) {
         setBookingResult(newBooking);
 
-        // Open WhatsApp
+        // Open WhatsApp - redirect langsung untuk hindari popup blocker
+        const waNumber = formatWhatsAppNumber(settings.whatsapp_number);
         const waMessage = encodeURIComponent(
           `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\nTotal:\n${formatPrice(totalPrice)}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
         );
-        window.open(`https://wa.me/${settings.whatsapp_number}?text=${waMessage}`, "_blank");
+        window.location.href = `https://wa.me/${waNumber}?text=${waMessage}`;
       }
     } catch {
       setError("Gagal membuat booking. Silakan coba lagi.");

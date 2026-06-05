@@ -136,3 +136,23 @@ export function addDays(dateStr: string, days: number): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Format nomor WhatsApp ke format internasional
+ * Contoh: 082152425391 → 6282152425391
+ */
+export function formatWhatsAppNumber(phone: string): string {
+  // Hapus semua karakter non-digit
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Jika mulai dengan '0', ganti dengan '62'
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.substring(1);
+  }
+  // Jika mulai dengan '62' sudah benar
+  else if (!cleaned.startsWith('62')) {
+    cleaned = '62' + cleaned;
+  }
+  
+  return cleaned;
+}
