@@ -242,6 +242,8 @@ function BookingContent() {
 
     let [closeH, closeM] = hours.close.split(":").map(Number);
     let closeMinutes = closeH * 60 + closeM;
+
+    // Overnight: if close is <= start, it means next day (e.g. close 01:00, start 23:00)
     if (closeMinutes <= startMinutes) closeMinutes += 24 * 60;
 
     const maxDuration = Math.floor((closeMinutes - startMinutes) / 60);

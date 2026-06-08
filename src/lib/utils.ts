@@ -97,9 +97,10 @@ export function generateTimeSlots(
   const closeTotalMinutes = closeHours * 60 + closeMinutes;
 
   // Handle overnight (e.g., close at 01:00 means next day)
+  // +1 to include the closing hour slot for overnight (e.g. 01:00 appears)
   const adjustedCloseMinutes =
     closeTotalMinutes <= currentMinutes
-      ? closeTotalMinutes + 24 * 60
+      ? closeTotalMinutes + 24 * 60 + 1
       : closeTotalMinutes;
 
   while (currentMinutes < adjustedCloseMinutes) {
