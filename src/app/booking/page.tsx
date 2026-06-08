@@ -281,10 +281,9 @@ function BookingContent() {
         if (settingData) setSettings(settingData);
       } catch {}
 
-      try {
-        const { data: discData } = await supabase.from("disclaimers").select("*").eq("active", true).order("sort_order");
-        if (discData && discData.length > 0) setDisclaimers(discData);
-      } catch {}
+      // Disclaimers fetched from database are not used here.
+      // We use staticDisclaimers (7 items) to ensure consistency.
+      // Dashboard disclaimer feature is still available for other purposes.
 
       try {
         const { data: hoursData } = await supabase.from("business_hours").select("*");
