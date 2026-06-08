@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking, Device } from "@/types/database";
-import { formatPrice, getTodayDate } from "@/lib/utils";
+import { formatPrice, getTodayDate, calculateEndTime, generateTimeSlots, getDayName, formatDate } from "@/lib/utils";
 
 const staticDevices: Device[] = [
   { id: "1", name: "Reguler 1", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
@@ -16,6 +16,16 @@ const staticDevices: Device[] = [
   { id: "7", name: "VIP 2", category: "VIP2", hourly_price: 35000, active: true, created_at: "", updated_at: "" },
 ];
 
+const staticBusinessHours: Record<string, { open: string; close: string }> = {
+  SUNDAY: { open: "10:00", close: "01:00" },
+  MONDAY: { open: "10:00", close: "01:00" },
+  TUESDAY: { open: "10:00", close: "01:00" },
+  WEDNESDAY: { open: "10:00", close: "01:00" },
+  THURSDAY: { open: "10:00", close: "01:00" },
+  FRIDAY: { open: "10:00", close: "03:00" },
+  SATURDAY: { open: "10:00", close: "03:00" },
+};
+
 export default function BookingsPage() {
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status");
@@ -24,6 +34,31 @@ export default function BookingsPage() {
   const [devices, setDevices] = useState<Device[]>(staticDevices);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(statusFilter || "ALL");
+  const [businessHours, setBusinessHours] = useState(staticBusinessHours);
+
+  // Reschedule modal state
+  const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleSlots, setRescheduleSlots] = useState<string[]>([]);
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState("");
+
+  useEffect(() => {
+    async function fetchInitial() {
+      try {
+        const { data: hoursData } = await supabase.from("business_hours").select("*");
+        if (hoursData && hoursData.length > 0) {
+          const hoursMap: Record<string, { open: string; close: string }> = {};
+          hoursData.forEach((h: any) => {
+            if (h.active) hoursMap[h.day_name] = { open: h.open_time, close: h.close_time };
+          });
+          if (Object.keys(hoursMap).length > 0) setBusinessHours(hoursMap);
+        }
+      } catch {}
+    }
+    fetchInitial();
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -69,6 +104,121 @@ export default function BookingsPage() {
     }
   };
 
+  // Open reschedule modal
+  const openReschedule = (booking: Booking) => {
+    setRescheduleBooking(booking);
+    setRescheduleDate(booking.booking_date);
+    setRescheduleTime("");
+    setRescheduleSlots([]);
+    setRescheduleError("");
+  };
+
+  const closeReschedule = () => {
+    setRescheduleBooking(null);
+    setRescheduleDate("");
+    setRescheduleTime("");
+    setRescheduleSlots([]);
+    setRescheduleError("");
+  };
+
+  // Fetch available slots when date changes for reschedule
+  useEffect(() => {
+    if (!rescheduleBooking || !rescheduleDate) {
+      setRescheduleSlots([]);
+      return;
+    }
+
+    const bookId = rescheduleBooking!.id;
+    const bookDeviceId = rescheduleBooking!.device_id;
+    const bookDuration = rescheduleBooking!.duration_hours;
+
+    async function fetchSlots() {
+      setRescheduleLoading(true);
+      setRescheduleTime("");
+      setRescheduleError("");
+
+      const dayName = getDayName(new Date(rescheduleDate + "T12:00:00"));
+      const hours = businessHours[dayName] || { open: "10:00", close: "01:00" };
+
+      // Generate all time slots
+      const allSlots = generateTimeSlots(hours.open, hours.close);
+
+      // Fetch existing bookings for this device+date (excluding current booking)
+      try {
+        const { data: existingBookings } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("device_id", bookDeviceId)
+          .eq("booking_date", rescheduleDate)
+          .not("status", "in", '("EXPIRED","FINISHED","REJECTED")');
+
+        // Filter out slots that overlap with existing bookings
+        const availableSlots = allSlots.filter((slot) => {
+          const slotEnd = calculateEndTime(slot, bookDuration);
+
+          // For each existing booking (excluding current one), check overlap
+          for (const existing of existingBookings || []) {
+            if (existing.id === bookId) continue; // skip current booking
+
+            const hasOverlap = slot < existing.end_time && slotEnd > existing.start_time;
+            if (hasOverlap) return false;
+          }
+
+          return true;
+        });
+
+        setRescheduleSlots(availableSlots);
+      } catch {
+        setRescheduleError("Gagal memuat slot");
+      } finally {
+        setRescheduleLoading(false);
+      }
+    }
+
+    fetchSlots();
+  }, [rescheduleDate, rescheduleBooking, businessHours]);
+
+  // Confirm reschedule
+  const handleRescheduleConfirm = async () => {
+    if (!rescheduleBooking || !rescheduleDate || !rescheduleTime) return;
+
+    const bookId = rescheduleBooking!.id;
+    const bookDuration = rescheduleBooking!.duration_hours;
+    const endTime = calculateEndTime(rescheduleTime, bookDuration);
+
+    setRescheduleError("");
+
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          booking_date: rescheduleDate,
+          start_time: rescheduleTime,
+          end_time: endTime,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", bookId);
+
+      if (error) {
+        setRescheduleError("Gagal reschedule: " + error.message);
+        return;
+      }
+
+      // Update local state
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === bookId
+            ? { ...b, booking_date: rescheduleDate, start_time: rescheduleTime, end_time: endTime }
+            : b
+        )
+      );
+
+      closeReschedule();
+    } catch (err: any) {
+      setRescheduleError("Gagal reschedule: " + err.message);
+    }
+  };
+
   const getDeviceName = (deviceId: string) => {
     return devices.find((d) => d.id === deviceId)?.name || deviceId;
   };
@@ -84,6 +234,20 @@ export default function BookingsPage() {
       case "REJECTED": return "#991B1B";
       default: return "#6B7280";
     }
+  };
+
+  const getAvailableDates = () => {
+    const dates: { value: string; label: string }[] = [];
+    const today = new Date();
+    for (let i = 0; i <= 7; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const label = `${dayNames[date.getDay()]}, ${date.getDate()}`;
+      dates.push({ value, label });
+    }
+    return dates;
   };
 
   return (
@@ -161,6 +325,13 @@ export default function BookingsPage() {
                       ✅ Setujui
                     </button>
                     <button
+                      onClick={() => openReschedule(booking)}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                      style={{ backgroundColor: "#3B82F6", color: "#FFF" }}
+                    >
+                      📅 Reschedule
+                    </button>
+                    <button
                       onClick={() => handleStatusChange(booking.id, "REJECTED")}
                       className="flex-1 py-1.5 rounded-lg text-xs font-medium"
                       style={{ backgroundColor: "#EF4444", color: "#FFF" }}
@@ -188,13 +359,22 @@ export default function BookingsPage() {
                   </>
                 )}
                 {booking.status === "BOOKED" && (
-                  <button
-                    onClick={() => handleStatusChange(booking.id, "IN_USE")}
-                    className="flex-1 py-1.5 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: "#8B5CF6", color: "#FFF" }}
-                  >
-                    ▶️ Mark In Use
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleStatusChange(booking.id, "IN_USE")}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                      style={{ backgroundColor: "#8B5CF6", color: "#FFF" }}
+                    >
+                      ▶️ Mark In Use
+                    </button>
+                    <button
+                      onClick={() => openReschedule(booking)}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                      style={{ backgroundColor: "#3B82F6", color: "#FFF" }}
+                    >
+                      📅 Reschedule
+                    </button>
+                  </>
                 )}
                 {booking.status === "IN_USE" && (
                   <button
@@ -210,6 +390,111 @@ export default function BookingsPage() {
           ))}
         </div>
       )}
+
+      {/* Reschedule Modal */}
+      {rescheduleBooking && (() => {
+        const rb = rescheduleBooking!;
+        return (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+          onClick={closeReschedule}
+        >
+          <div
+            className="rounded-xl p-6 w-full max-w-md"
+            style={{ backgroundColor: "#1F2330" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold mb-2">Reschedule Booking</h3>
+            <p className="text-sm mb-4" style={{ color: "#A1A1AA" }}>
+              {rb.customer_name} — {getDeviceName(rb.device_id)}
+              <br />
+              Durasi: {rb.duration_hours} Jam
+            </p>
+
+            {rescheduleError && (
+              <div className="mb-3 p-2 rounded-lg bg-red-900/30 border border-red-700 text-red-400 text-xs">
+                {rescheduleError}
+              </div>
+            )}
+
+            {/* Pilih Tanggal */}
+            <label className="text-xs font-semibold mb-1 block" style={{ color: "#A1A1AA" }}>
+              Pilih Tanggal Baru
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {getAvailableDates().map((date) => (
+                <button
+                  key={date.value}
+                  onClick={() => setRescheduleDate(date.value)}
+                  className="py-2 rounded-lg text-xs font-medium transition-colors"
+                  style={{
+                    backgroundColor: rescheduleDate === date.value ? "#F5B700" : "#171923",
+                    color: rescheduleDate === date.value ? "#000" : "#FFF",
+                    border: "1px solid",
+                    borderColor: rescheduleDate === date.value ? "#F5B700" : "#3F4452",
+                  }}
+                >
+                  {date.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Pilih Jam */}
+            <label className="text-xs font-semibold mb-1 block" style={{ color: "#A1A1AA" }}>
+              Pilih Jam Baru
+            </label>
+            {rescheduleLoading ? (
+              <p className="text-xs py-4 text-center" style={{ color: "#A1A1AA" }}>Memuat slot...</p>
+            ) : rescheduleSlots.length === 0 && rescheduleDate ? (
+              <p className="text-xs py-4 text-center" style={{ color: "#EF4444" }}>
+                Tidak ada slot tersedia untuk tanggal ini
+              </p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2 mb-4 max-h-40 overflow-y-auto">
+                {rescheduleSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    onClick={() => setRescheduleTime(slot)}
+                    className="py-2 rounded-lg text-xs font-medium transition-colors"
+                    style={{
+                      backgroundColor: rescheduleTime === slot ? "#F5B700" : "#171923",
+                      color: rescheduleTime === slot ? "#000" : "#FFF",
+                      border: "1px solid",
+                      borderColor: rescheduleTime === slot ? "#F5B700" : "#3F4452",
+                    }}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={closeReschedule}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium"
+                style={{ backgroundColor: "#3F4452", color: "#FFF" }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleRescheduleConfirm}
+                disabled={!rescheduleDate || !rescheduleTime}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50"
+                style={{
+                  backgroundColor: rescheduleDate && rescheduleTime ? "#3B82F6" : "#3F4452",
+                  color: rescheduleDate && rescheduleTime ? "#FFF" : "#6B7280",
+                }}
+              >
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+      })()}
     </div>
   );
 }
