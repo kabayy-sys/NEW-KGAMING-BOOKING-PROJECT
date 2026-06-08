@@ -441,6 +441,7 @@ function BookingContent() {
 
     if (newBooking) {
       setBookingResult(newBooking);
+      setBookings((prev) => [...prev, newBooking]);
     }
 
     setIsSubmitting(false);
