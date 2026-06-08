@@ -1,121 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { Device } from "@/types/database";
-import { formatPrice, getTodayDate } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 
-// Static device data for preview when Supabase is not connected
-const staticDevices: Device[] = [
+const REGULAR_HOURLY_PRICE = 10000;
+
+// Device info for homepage display (grouped by category)
+const homepageDevices = [
   {
-    id: "1",
-    name: "Reguler 1",
+    label: "Reguler",
+    icon: "🎮",
     category: "REGULAR",
-    hourly_price: 10000,
-    active: true,
-    created_at: "",
-    updated_at: "",
+    price: REGULAR_HOURLY_PRICE,
+    count: 4,
+    href: "/booking?category=REGULAR",
   },
   {
-    id: "2",
-    name: "Reguler 2",
-    category: "REGULAR",
-    hourly_price: 10000,
-    active: true,
-    created_at: "",
-    updated_at: "",
-  },
-  {
-    id: "3",
-    name: "Reguler 3",
-    category: "REGULAR",
-    hourly_price: 10000,
-    active: true,
-    created_at: "",
-    updated_at: "",
-  },
-  {
-    id: "4",
-    name: "Reguler 4",
-    category: "REGULAR",
-    hourly_price: 10000,
-    active: true,
-    created_at: "",
-    updated_at: "",
-  },
-  {
+    label: "VIP 1A",
+    icon: "🌟",
+    price: 30000,
     id: "5",
-    name: "VIP 1A",
-    category: "VIP1",
-    hourly_price: 30000,
-    active: true,
-    created_at: "",
-    updated_at: "",
+    href: "/booking?device=5",
   },
   {
+    label: "VIP 1B",
+    icon: "🌟",
+    price: 30000,
     id: "6",
-    name: "VIP 1B",
-    category: "VIP1",
-    hourly_price: 30000,
-    active: true,
-    created_at: "",
-    updated_at: "",
+    href: "/booking?device=6",
   },
   {
+    label: "VIP 2",
+    icon: "👑",
+    price: 35000,
     id: "7",
-    name: "VIP 2",
-    category: "VIP2",
-    hourly_price: 35000,
-    active: true,
-    created_at: "",
-    updated_at: "",
+    href: "/booking?device=7",
   },
 ];
 
-const categoryIcons: Record<string, string> = {
-  REGULAR: "🎮",
-  VIP1: "🌟",
-  VIP2: "👑",
-};
-
-const categoryLabels: Record<string, string> = {
-  REGULAR: "Reguler",
-  VIP1: "VIP 1",
-  VIP2: "VIP 2",
-};
-
 export default function HomePage() {
-  const [devices, setDevices] = useState<Device[]>(staticDevices);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchDevices() {
-      try {
-        const { data } = await supabase
-          .from("devices")
-          .select("*")
-          .eq("active", true)
-          .order("name");
-
-        if (data && data.length > 0) {
-          setDevices(data);
-        }
-      } catch {
-        // Use static data if Supabase is not configured
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchDevices();
-  }, []);
-
-  // Group devices by category
-  const regularDevices = devices.filter((d) => d.category === "REGULAR");
-  const vip1Devices = devices.filter((d) => d.category === "VIP1");
-  const vip2Devices = devices.filter((d) => d.category === "VIP2");
-
   return (
     <div className="flex-1">
       {/* Staff Login Link */}
@@ -158,102 +81,53 @@ export default function HomePage() {
           Pilih Device Kamu
         </h2>
 
-        {loading ? (
-          <p className="text-center" style={{ color: "#A1A1AA" }}>
-            Memuat device...
-          </p>
-        ) : (
-          <>
-            {/* Regular Devices */}
-            {regularDevices.length > 0 && (
-              <DeviceCategorySection
-                title="Reguler"
-                icon="🎮"
-                devices={regularDevices}
-              />
-            )}
+        <>
+          {/* Device Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {homepageDevices.map((device) => (
+              <div
+                key={device.id || device.category}
+                className="rounded-xl p-4 border border-gray-800"
+                style={{ backgroundColor: "#1F2330" }}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-semibold text-white">{device.label}</p>
+                    <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
+                      {device.icon} {device.label}
+                    </p>
+                  </div>
+                  <span
+                    className="text-xs px-2 py-1 rounded-full font-medium"
+                    style={{
+                      backgroundColor: "#22C55E20",
+                      color: "#22C55E",
+                    }}
+                  >
+                    Ready
+                  </span>
+                </div>
 
-            {/* VIP 1 Devices */}
-            {vip1Devices.length > 0 && (
-              <DeviceCategorySection
-                title="VIP 1"
-                icon="🌟"
-                devices={vip1Devices}
-              />
-            )}
+                <p className="text-lg font-bold text-white mb-3">
+                  {formatPrice(device.price)}
+                  <span className="text-sm font-normal" style={{ color: "#A1A1AA" }}>
+                    /Jam
+                  </span>
+                </p>
 
-            {/* VIP 2 Devices */}
-            {vip2Devices.length > 0 && (
-              <DeviceCategorySection
-                title="VIP 2"
-                icon="👑"
-                devices={vip2Devices}
-              />
-            )}
-          </>
-        )}
+                <Link
+                  href={device.href}
+                  className="block w-full py-2 rounded-lg text-center font-medium transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: "#F5B700", color: "#000" }}
+                >
+                  Booking
+                </Link>
+              </div>
+            ))}
+          </div>
+        </>
       </section>
     </div>
   );
 }
 
-function DeviceCategorySection({
-  title,
-  icon,
-  devices,
-}: {
-  title: string;
-  icon: string;
-  devices: Device[];
-}) {
-  return (
-    <div className="mb-6">
-      <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider">
-        {icon} {title}
-      </h3>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {devices.map((device) => (
-          <div
-            key={device.id}
-            className="rounded-xl p-4 border border-gray-800"
-            style={{ backgroundColor: "#1F2330" }}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="font-semibold text-white">{device.name}</p>
-                <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-                  {icon} {title}
-                </p>
-              </div>
-              <span
-                className="text-xs px-2 py-1 rounded-full font-medium"
-                style={{
-                  backgroundColor: "#22C55E20",
-                  color: "#22C55E",
-                }}
-              >
-                Ready
-              </span>
-            </div>
-
-            <p className="text-lg font-bold text-white mb-3">
-              {formatPrice(device.hourly_price)}
-              <span className="text-sm font-normal" style={{ color: "#A1A1AA" }}>
-                /Jam
-              </span>
-            </p>
-
-            <Link
-              href={`/booking?device=${device.id}`}
-              className="block w-full py-2 rounded-lg text-center font-medium transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#F5B700", color: "#000" }}
-            >
-              Booking
-            </Link>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

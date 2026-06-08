@@ -22,7 +22,16 @@ import {
 import Link from "next/link";
 
 // Booking flow steps
-const STEPS = [
+const BASE_STEPS = [
+  { id: 1, label: "Unit" },
+  { id: 2, label: "Tanggal" },
+  { id: 3, label: "Jam" },
+  { id: 4, label: "Durasi" },
+  { id: 5, label: "Paket" },
+  { id: 6, label: "Ringkasan" },
+  { id: 7, label: "Konfirmasi" },
+];
+const VIP_STEPS = [
   { id: 1, label: "Device" },
   { id: 2, label: "Tanggal" },
   { id: 3, label: "Jam" },
@@ -83,9 +92,16 @@ const staticBusinessHours: Record<string, { open: string; close: string }> = {
 function BookingContent() {
   const searchParams = useSearchParams();
   const deviceIdParam = searchParams.get("device");
+  const categoryParam = searchParams.get("category");
+
+  // Determine if this is a REGULAR category booking (choose unit first)
+  const isRegularFlow = categoryParam === "REGULAR";
+
+  // STEPS based on flow
+  const STEPS = isRegularFlow ? BASE_STEPS : VIP_STEPS;
 
   // State
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(isRegularFlow ? 1 : 1);
   const [devices, setDevices] = useState<Device[]>(staticDevices);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>(staticPricing);
   const [settings, setSettings] = useState<Settings>(staticSettings);
@@ -301,7 +317,10 @@ function BookingContent() {
     fetchBookings();
   }, [selectedDate]);
 
-  // Set initial device from URL param
+  // Filter REGULAR devices for unit selection
+  const regularUnits = devices.filter((d) => d.category === "REGULAR");
+
+  // Set initial device from URL param or category
   useEffect(() => {
     if (deviceIdParam && devices.length > 0) {
       const device = devices.find((d) => d.id === deviceIdParam);
@@ -309,8 +328,23 @@ function BookingContent() {
         setSelectedDevice(device);
         setStep(2);
       }
+    } else if (isRegularFlow) {
+      // For REGULAR flow, stay at step 1 to select unit
+      setSelectedDevice(null);
+      setStep(1);
     }
-  }, [deviceIdParam, devices]);
+  }, [deviceIdParam, devices, isRegularFlow]);
+
+  // Select a REGULAR unit (from step 1 category flow)
+  const handleUnitSelect = (device: Device) => {
+    setSelectedDevice(device);
+    setSelectedDate("");
+    setSelectedStartTime("");
+    setSelectedDuration(0);
+    setSelectedPackage(null);
+    setSelectedPayment(null);
+    setStep(2);
+  };
 
   // Handlers
   const handleDeviceSelect = (device: Device) => {
@@ -550,8 +584,38 @@ function BookingContent() {
         </div>
       )}
 
-      {/* Step 1: Pilih Device */}
-      {step === 1 && (
+      {/* Step 1: Pilih Unit (REGULAR) or Pilih Device (VIP) */}
+      {step === 1 && isRegularFlow ? (
+        <div>
+          <h2 className="text-xl font-bold mb-4">Pilih Unit Reguler</h2>
+          <p className="text-sm mb-4" style={{ color: "#A1A1AA" }}>
+            Tersedia {regularUnits.length} unit Reguler. Pilih unit yang kamu mau:
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {regularUnits.map((device) => (
+              <button
+                key={device.id}
+                onClick={() => handleUnitSelect(device)}
+                className="rounded-xl p-4 border text-left transition-all hover:border-yellow-600"
+                style={{
+                  backgroundColor: "#1F2330",
+                  borderColor:
+                    selectedDevice?.id === device.id ? "#F5B700" : "#3F4452",
+                }}
+              >
+                <p className="font-semibold">{device.name}</p>
+                <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
+                  🎮 Reguler
+                </p>
+                <p className="text-sm font-bold mt-2" style={{ color: "#F5B700" }}>
+                  {formatPrice(device.hourly_price)}
+                  <span className="text-xs font-normal" style={{ color: "#A1A1AA" }}>/Jam</span>
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : step === 1 && !isRegularFlow ? (
         <div>
           <h2 className="text-xl font-bold mb-4">Pilih Device</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -578,7 +642,7 @@ function BookingContent() {
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Step 2: Pilih Tanggal */}
       {step === 2 && (
