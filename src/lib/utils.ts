@@ -84,6 +84,8 @@ export function calculateEndTime(startTime: string, durationHours: number): stri
 
 /**
  * Generate time slots (30-minute intervals)
+ * For overnight hours (close <= open), close is treated as next day.
+ * The closing hour itself is excluded (e.g. if close=01:00, last slot is 00:30).
  */
 export function generateTimeSlots(
   openTime: string,
@@ -97,10 +99,10 @@ export function generateTimeSlots(
   const closeTotalMinutes = closeHours * 60 + closeMinutes;
 
   // Handle overnight (e.g., close at 01:00 means next day)
-  // +1 to include the closing hour slot for overnight (e.g. 01:00 appears)
+  // Closing hour itself is excluded (use < not <=)
   const adjustedCloseMinutes =
     closeTotalMinutes <= currentMinutes
-      ? closeTotalMinutes + 24 * 60 + 1
+      ? closeTotalMinutes + 24 * 60
       : closeTotalMinutes;
 
   while (currentMinutes < adjustedCloseMinutes) {
