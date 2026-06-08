@@ -14,6 +14,12 @@ const homepageDevices = [
     price: REGULAR_HOURLY_PRICE,
     count: 4,
     href: "/booking?category=REGULAR",
+    description: [
+      "PS4 & 2 stick",
+      "TV 43 inch 4K QLED",
+      "Sofa",
+      "Maks 3 orang",
+    ],
   },
   {
     label: "VIP 1A",
@@ -21,6 +27,14 @@ const homepageDevices = [
     price: 30000,
     id: "5",
     href: "/booking?device=5",
+    description: [
+      "PS4 PRO & 2 Stick",
+      "Nintendo Switch OLED",
+      "Netflix",
+      "TV 55 inch 4K QLED",
+      "Sofa + Bantal",
+      "Kapasitas 4-5 orang",
+    ],
   },
   {
     label: "VIP 1B",
@@ -28,6 +42,14 @@ const homepageDevices = [
     price: 30000,
     id: "6",
     href: "/booking?device=6",
+    description: [
+      "PS4 PRO & 2 Stick",
+      "Nintendo Switch OLED",
+      "Netflix",
+      "TV 55 inch 4K QLED",
+      "Sofa + Bantal",
+      "Kapasitas 4-5 orang",
+    ],
   },
   {
     label: "VIP 2",
@@ -35,6 +57,13 @@ const homepageDevices = [
     price: 35000,
     id: "7",
     href: "/booking?device=7",
+    description: [
+      "PS5 & 2 stick",
+      "Nintendo Switch OLED",
+      "TV 55 inch 4K QLED",
+      "Sofa + Bantal",
+      "Kapasitas 4-5 orang",
+    ],
   },
 ];
 
@@ -114,6 +143,22 @@ export default function HomePage() {
                     /Jam
                   </span>
                 </p>
+
+                {/* Description */}
+                {device.description && (
+                  <ul className="mb-4 space-y-1">
+                    {device.description.map((item: string, i: number) => (
+                      <li
+                        key={i}
+                        className="text-xs flex items-start gap-1.5"
+                        style={{ color: "#A1A1AA" }}
+                      >
+                        <span className="mt-0.5">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 <Link
                   href={device.href}
