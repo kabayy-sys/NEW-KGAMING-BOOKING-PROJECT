@@ -461,30 +461,26 @@ function BookingContent() {
       expires_at: expiresAt.toISOString(),
     };
 
-    // Simpan booking di background
-    let newBooking: Booking | null = null;
+    // Simpan booking
     try {
       const { data, error } = await supabase.from("bookings").insert(bookingData).select().single();
+      
       if (error) {
         console.error("Insert booking gagal:", error.message);
-      } else if (data) {
-        newBooking = data;
+        setError("Gagal menyimpan booking: " + error.message + ". Silakan hubungi staff melalui WhatsApp.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (data) {
+        setBookingResult(data);
+        setBookings((prev) => [...prev, data]);
       }
     } catch (e) {
       console.error("Insert booking error:", e);
-      // Fallback: tetap pakai data booking lokal
-      newBooking = {
-        id: crypto.randomUUID(),
-        ...bookingData,
-        notes: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Booking;
-    }
-
-    if (newBooking) {
-      setBookingResult(newBooking);
-      setBookings((prev) => [...prev, newBooking]);
+      setError("Terjadi kesalahan koneksi. Silakan coba lagi.");
+      setIsSubmitting(false);
+      return;
     }
 
     setIsSubmitting(false);
