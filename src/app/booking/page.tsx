@@ -457,16 +457,21 @@ function BookingContent() {
       payment_type: selectedPayment,
       payment_amount: selectedPayment === "DP" ? selectedPricing?.hourly_price || totalPrice : totalPrice,
       total_price: totalPrice,
-      status: "PENDING",
+      status: "WAITING_PAYMENT",
       expires_at: expiresAt.toISOString(),
     };
 
     // Simpan booking di background
     let newBooking: Booking | null = null;
     try {
-      const { data } = await supabase.from("bookings").insert(bookingData).select().single();
-      if (data) newBooking = data;
-    } catch {
+      const { data, error } = await supabase.from("bookings").insert(bookingData).select().single();
+      if (error) {
+        console.error("Insert booking gagal:", error.message);
+      } else if (data) {
+        newBooking = data;
+      }
+    } catch (e) {
+      console.error("Insert booking error:", e);
       // Fallback: tetap pakai data booking lokal
       newBooking = {
         id: crypto.randomUUID(),
