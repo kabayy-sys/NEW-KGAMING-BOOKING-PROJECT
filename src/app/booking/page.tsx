@@ -104,12 +104,14 @@ function BookingContent() {
 
   // State
   const [step, setStep] = useState(isRegularFlow ? 1 : 1);
-  const [devices, setDevices] = useState<Device[]>(staticDevices);
-  const [pricingRules, setPricingRules] = useState<PricingRule[]>(staticPricing);
-  const [settings, setSettings] = useState<Settings>(staticSettings);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [disclaimers, setDisclaimers] = useState<Disclaimer[]>(staticDisclaimers);
-  const [businessHours, setBusinessHours] = useState(staticBusinessHours);
+  const [businessHours, setBusinessHours] = useState<Record<string, { open: string; close: string }>>({});
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [dataReady, setDataReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   // Selected values
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
@@ -165,7 +167,8 @@ function BookingContent() {
   const getAvailableDates = () => {
     const dates: { value: string; label: string }[] = [];
     const today = new Date();
-    const maxDays = settings.max_booking_days;
+    const set = settings || staticSettings;
+    const maxDays = set.max_booking_days;
 
     for (let i = 0; i <= maxDays; i++) {
       const date = new Date(today);
@@ -263,31 +266,42 @@ function BookingContent() {
       })()
     : false;
 
-  // Initialize
+  // Simple UUID check: must have dashes (e.g. "d290f1ee-6c54-4b01-90e6-d701748f0851")
+  const isValidUUID = (id: string) => id.includes("-");
+
+  // Initialize - fetch data from Supabase
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchData() {
+      // Fetch devices
       try {
         const { data: devData } = await supabase.from("devices").select("*").eq("active", true).order("name");
-        if (devData && devData.length > 0) setDevices(devData);
-      } catch {}
+        if (!cancelled && devData && devData.length > 0) setDevices(devData);
+      } catch (e) {
+        console.error("Gagal load devices:", e);
+      }
 
+      // Fetch pricing
       try {
         const { data: priceData } = await supabase.from("pricing_rules").select("*");
-        if (priceData && priceData.length > 0) setPricingRules(priceData);
-      } catch {}
+        if (!cancelled && priceData && priceData.length > 0) setPricingRules(priceData);
+      } catch (e) {
+        console.error("Gagal load pricing:", e);
+      }
 
+      // Fetch settings
       try {
         const { data: settingData } = await supabase.from("settings").select("*").single();
-        if (settingData) setSettings(settingData);
-      } catch {}
+        if (!cancelled && settingData) setSettings(settingData);
+      } catch (e) {
+        console.error("Gagal load settings:", e);
+      }
 
-      // Disclaimers fetched from database are not used here.
-      // We use staticDisclaimers (7 items) to ensure consistency.
-      // Dashboard disclaimer feature is still available for other purposes.
-
+      // Fetch business hours
       try {
         const { data: hoursData } = await supabase.from("business_hours").select("*");
-        if (hoursData && hoursData.length > 0) {
+        if (!cancelled && hoursData && hoursData.length > 0) {
           const hoursMap: Record<string, { open: string; close: string }> = {};
           hoursData.forEach((h: any) => {
             if (h.active) {
@@ -296,10 +310,15 @@ function BookingContent() {
           });
           if (Object.keys(hoursMap).length > 0) setBusinessHours(hoursMap);
         }
-      } catch {}
+      } catch (e) {
+        console.error("Gagal load hours:", e);
+      }
+
+      if (!cancelled) setDataReady(true);
     }
 
     fetchData();
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch bookings when date/device changes
@@ -420,8 +439,17 @@ function BookingContent() {
       return;
     }
 
+    // VALIDASI: Pastikan device_id adalah UUID valid (dari database, bukan data statis)
+    if (!isValidUUID(selectedDevice.id)) {
+      setError("Data device belum termuat dari server. Silakan refresh halaman dan coba lagi.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
+
+    // Fallback settings jika belum terload
+    const s = settings || staticSettings;
 
     // Hitung DP (harga 1 jam) atau Lunas (total)
     const dpAmount = selectedPricing?.hourly_price || totalPrice;
@@ -429,9 +457,9 @@ function BookingContent() {
     const paymentAmount = selectedPayment === "DP" ? dpAmount : totalPrice;
 
     // Generate WhatsApp URL dulu (synchronously, dari event klik user langsung)
-    const waNumber = formatWhatsAppNumber(settings.whatsapp_number);
+    const waNumber = formatWhatsAppNumber(s.whatsapp_number);
     const waMessage = encodeURIComponent(
-      `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\n${paymentLabel}:\n${formatPrice(paymentAmount)}\n\nTransfer ke:\n${settings.bank_name} - ${settings.bank_account_number}\na/n ${settings.bank_account_holder}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
+      `Halo Admin K Gaming XCafe\n\nSaya ingin melakukan booking.\n\nNama:\n${customerName}\n\nDevice:\n${selectedDevice.name}\n\nTanggal:\n${formatDate(selectedDate)}\n\nJam Mulai:\n${selectedStartTime}\n\nJam Selesai:\n${endTime}\n\nDurasi:\n${selectedDuration} Jam\n\nPaket:\n${selectedPackage === "PROMO" ? "Promo Weekday" : "Harga Normal"}\n\nMetode Pembayaran:\n${selectedPayment === "DP" ? "DP" : "Lunas"}\n\n${paymentLabel}:\n${formatPrice(paymentAmount)}\n\nTransfer ke:\n${s.bank_name} - ${s.bank_account_number}\na/n ${s.bank_account_holder}\n\nSaya sudah membaca dan menyetujui seluruh ketentuan booking.`
     );
     const waUrl = `https://wa.me/${waNumber}?text=${waMessage}`;
 
@@ -442,7 +470,7 @@ function BookingContent() {
     // Generate booking code
     const code = `KG-${selectedDate.replace(/-/g, "")}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, "0")}`;
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + settings.booking_expiration_minutes);
+    expiresAt.setMinutes(expiresAt.getMinutes() + s.booking_expiration_minutes);
 
     const bookingData = {
       booking_code: code,
@@ -487,6 +515,7 @@ function BookingContent() {
   };
 
   // Success state
+  const s = settings || staticSettings;
   if (bookingResult) {
     return (
       <div className="flex-1 flex items-center justify-center px-4 py-12">
@@ -510,12 +539,12 @@ function BookingContent() {
             style={{ backgroundColor: "#1F2330" }}
           >
             <h3 className="font-bold mb-3">Informasi Pembayaran</h3>
-            <p style={{ color: "#A1A1AA" }}>Bank: {settings.bank_name}</p>
+            <p style={{ color: "#A1A1AA" }}>Bank: {s.bank_name}</p>
             <p style={{ color: "#A1A1AA" }}>
-              No. Rekening: {settings.bank_account_number}
+              No. Rekening: {s.bank_account_number}
             </p>
             <p style={{ color: "#A1A1AA" }}>
-              A/N: {settings.bank_account_holder}
+              A/N: {s.bank_account_holder}
             </p>
             <div className="mt-4 pt-4 border-t border-gray-700">
               <p style={{ color: "#A1A1AA" }}>
@@ -534,7 +563,7 @@ function BookingContent() {
               </p>
             )}
             <p className="mt-2 text-sm" style={{ color: "#EAB308" }}>
-              ⏱ Batas pembayaran {settings.booking_expiration_minutes} menit
+              ⏱ Batas pembayaran {s.booking_expiration_minutes} menit
             </p>
           </div>
 
@@ -648,6 +677,13 @@ function BookingContent() {
           </div>
         </div>
       ) : null}
+
+      {/* Loading state */}
+      {!dataReady && devices.length === 0 && (
+        <div className="flex-1 flex items-center justify-center py-16">
+          <p className="text-lg" style={{ color: "#A1A1AA" }}>Memuat data...</p>
+        </div>
+      )}
 
       {/* Step 2: Pilih Tanggal */}
       {step === 2 && (
