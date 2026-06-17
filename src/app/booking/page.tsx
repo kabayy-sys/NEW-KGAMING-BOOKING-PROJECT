@@ -332,15 +332,20 @@ function BookingContent() {
     fetchBookings();
   }, [selectedDate]);
 
-  // Set initial device from URL param
+  // Set initial device from URL param (check Supabase devices first, then static fallback)
   useEffect(() => {
-    if (deviceIdParam && devices.length > 0) {
-      const device = devices.find((d) => d.id === deviceIdParam);
+    if (deviceIdParam) {
+      const device = devices.find((d) => d.id === deviceIdParam) ||
+                     staticDevices.find((d) => d.id === deviceIdParam);
       if (device) {
         setSelectedDevice(device);
         setNeedsDeviceSelection(false);
         setStep(1);
+      } else if (devices.length > 0) {
+        // Devices loaded but device ID not found in either source — show selection
+        setNeedsDeviceSelection(true);
       }
+      // If devices haven't loaded yet, wait for them (the effect will re-run)
     }
   }, [deviceIdParam, devices]);
 
