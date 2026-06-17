@@ -3,24 +3,8 @@
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 
-const REGULAR_HOURLY_PRICE = 10000;
-
-// Device info for homepage display (grouped by category)
+// Device info for homepage display
 const homepageDevices = [
-  {
-    label: "Reguler",
-    icon: "🎮",
-    category: "REGULAR",
-    price: REGULAR_HOURLY_PRICE,
-    count: 4,
-    href: "/booking?category=REGULAR",
-    description: [
-      "PS4 & 2 stick",
-      "TV 43 inch 4K QLED",
-      "Sofa",
-      "Maks 3 orang",
-    ],
-  },
   {
     label: "VIP 1A",
     icon: "🌟",
@@ -94,13 +78,13 @@ export default function HomePage() {
             Lihat ketersediaan device secara realtime dan lakukan booking hanya
             dalam beberapa langkah.
           </p>
-          <a
-            href="#devices"
+          <Link
+            href="/booking"
             className="inline-block px-8 py-3 rounded-lg font-semibold text-lg text-black transition-opacity hover:opacity-90"
             style={{ backgroundColor: "#F5B700" }}
           >
             Booking Sekarang
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -115,7 +99,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {homepageDevices.map((device) => (
               <div
-                key={device.id || device.category}
+                key={device.id || device.label}
                 className="rounded-xl p-4 border border-gray-800"
                 style={{ backgroundColor: "#1F2330" }}
               >

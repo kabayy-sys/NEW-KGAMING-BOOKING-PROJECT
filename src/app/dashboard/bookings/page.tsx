@@ -7,10 +7,6 @@ import { Booking, Device } from "@/types/database";
 import { formatPrice, getTodayDate, calculateEndTime, generateTimeSlots, getDayName, formatDate } from "@/lib/utils";
 
 const staticDevices: Device[] = [
-  { id: "1", name: "Reguler 1", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
-  { id: "2", name: "Reguler 2", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
-  { id: "3", name: "Reguler 3", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
-  { id: "4", name: "Reguler 4", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
   { id: "5", name: "VIP 1A", category: "VIP1", hourly_price: 30000, active: true, created_at: "", updated_at: "" },
   { id: "6", name: "VIP 1B", category: "VIP1", hourly_price: 30000, active: true, created_at: "", updated_at: "" },
   { id: "7", name: "VIP 2", category: "VIP2", hourly_price: 35000, active: true, created_at: "", updated_at: "" },

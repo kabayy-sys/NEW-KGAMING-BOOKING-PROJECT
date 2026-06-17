@@ -21,39 +21,24 @@ import {
 } from "@/lib/utils";
 import Link from "next/link";
 
-// Booking flow steps
-const BASE_STEPS = [
-  { id: 1, label: "Unit" },
-  { id: 2, label: "Tanggal" },
-  { id: 3, label: "Jam" },
-  { id: 4, label: "Durasi" },
-  { id: 5, label: "Paket" },
-  { id: 6, label: "Ringkasan" },
-  { id: 7, label: "Konfirmasi" },
-];
-const VIP_STEPS = [
-  { id: 1, label: "Device" },
-  { id: 2, label: "Tanggal" },
-  { id: 3, label: "Jam" },
-  { id: 4, label: "Durasi" },
-  { id: 5, label: "Paket" },
-  { id: 6, label: "Ringkasan" },
-  { id: 7, label: "Konfirmasi" },
+// Booking flow steps (no device step when pre-selected from URL)
+const STEPS = [
+  { id: 1, label: "Tanggal" },
+  { id: 2, label: "Jam" },
+  { id: 3, label: "Durasi" },
+  { id: 4, label: "Paket" },
+  { id: 5, label: "Ringkasan" },
+  { id: 6, label: "Konfirmasi" },
 ];
 
-// Static fallback data
+// Static fallback data (VIP only - no REGULAR)
 const staticDevices: Device[] = [
-  { id: "1", name: "Reguler 1", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
-  { id: "2", name: "Reguler 2", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
-  { id: "3", name: "Reguler 3", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
-  { id: "4", name: "Reguler 4", category: "REGULAR", hourly_price: 10000, active: true, created_at: "", updated_at: "" },
   { id: "5", name: "VIP 1A", category: "VIP1", hourly_price: 30000, active: true, created_at: "", updated_at: "" },
   { id: "6", name: "VIP 1B", category: "VIP1", hourly_price: 30000, active: true, created_at: "", updated_at: "" },
   { id: "7", name: "VIP 2", category: "VIP2", hourly_price: 35000, active: true, created_at: "", updated_at: "" },
 ];
 
 const staticPricing: PricingRule[] = [
-  { id: "1", category: "REGULAR", hourly_price: 10000, promo_2h_price: 18000, promo_3h_price: 25000, discount_4h_percent: 20, created_at: "", updated_at: "" },
   { id: "2", category: "VIP1", hourly_price: 30000, promo_2h_price: 55000, promo_3h_price: 80000, discount_4h_percent: 20, created_at: "", updated_at: "" },
   { id: "3", category: "VIP2", hourly_price: 35000, promo_2h_price: 65000, promo_3h_price: 90000, discount_4h_percent: 20, created_at: "", updated_at: "" },
 ];
@@ -90,20 +75,25 @@ const staticBusinessHours: Record<string, { open: string; close: string }> = {
   SATURDAY: { open: "10:00", close: "03:00" },
 };
 
+// Device icon helper
+const getDeviceIcon = (category: string) => {
+  switch (category) {
+    case "VIP1": return "🌟";
+    case "VIP2": return "👑";
+    default: return "🎮";
+  }
+};
+
 // Component that uses useSearchParams
 function BookingContent() {
   const searchParams = useSearchParams();
   const deviceIdParam = searchParams.get("device");
-  const categoryParam = searchParams.get("category");
 
-  // Determine if this is a REGULAR category booking (choose unit first)
-  const isRegularFlow = categoryParam === "REGULAR";
-
-  // STEPS based on flow
-  const STEPS = isRegularFlow ? BASE_STEPS : VIP_STEPS;
+  // State: device pre-selection phase
+  const [needsDeviceSelection, setNeedsDeviceSelection] = useState(!deviceIdParam);
 
   // State
-  const [step, setStep] = useState(isRegularFlow ? 1 : 1);
+  const [step, setStep] = useState(1);
   const [devices, setDevices] = useState<Device[]>([]);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -111,7 +101,6 @@ function BookingContent() {
   const [businessHours, setBusinessHours] = useState<Record<string, { open: string; close: string }>>({});
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [dataReady, setDataReady] = useState(false);
-  const [loadError, setLoadError] = useState("");
 
   // Selected values
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
@@ -277,7 +266,10 @@ function BookingContent() {
       // Fetch devices
       try {
         const { data: devData } = await supabase.from("devices").select("*").eq("active", true).order("name");
-        if (!cancelled && devData && devData.length > 0) setDevices(devData);
+        if (!cancelled && devData && devData.length > 0) {
+          // Filter out REGULAR devices (safety check even if DB migration not yet applied)
+          setDevices(devData.filter((d: Device) => d.category !== "REGULAR"));
+        }
       } catch (e) {
         console.error("Gagal load devices:", e);
       }
@@ -340,44 +332,23 @@ function BookingContent() {
     fetchBookings();
   }, [selectedDate]);
 
-  // Filter REGULAR devices for unit selection
-  const regularUnits = devices.filter((d) => d.category === "REGULAR");
-
-  // Set initial device from URL param or category
+  // Set initial device from URL param
   useEffect(() => {
     if (deviceIdParam && devices.length > 0) {
       const device = devices.find((d) => d.id === deviceIdParam);
       if (device) {
         setSelectedDevice(device);
-        setStep(2);
+        setNeedsDeviceSelection(false);
+        setStep(1);
       }
-    } else if (isRegularFlow) {
-      // For REGULAR flow, stay at step 1 to select unit
-      setSelectedDevice(null);
-      setStep(1);
     }
-  }, [deviceIdParam, devices, isRegularFlow]);
-
-  // Select a REGULAR unit (from step 1 category flow)
-  const handleUnitSelect = (device: Device) => {
-    setSelectedDevice(device);
-    setSelectedDate("");
-    setSelectedStartTime("");
-    setSelectedDuration(0);
-    setSelectedPackage(null);
-    setSelectedPayment(null);
-    setStep(2);
-  };
+  }, [deviceIdParam, devices]);
 
   // Handlers
   const handleDeviceSelect = (device: Device) => {
     setSelectedDevice(device);
-    setSelectedDate("");
-    setSelectedStartTime("");
-    setSelectedDuration(0);
-    setSelectedPackage(null);
-    setSelectedPayment(null);
-    setStep(2);
+    setNeedsDeviceSelection(false);
+    setStep(1);
   };
 
   const handleDateSelect = (date: string) => {
@@ -386,7 +357,7 @@ function BookingContent() {
     setSelectedDuration(0);
     setSelectedPackage(null);
     setSelectedPayment(null);
-    setStep(3);
+    setStep(2);
   };
 
   const handleTimeSelect = (time: string) => {
@@ -394,7 +365,7 @@ function BookingContent() {
     setSelectedDuration(0);
     setSelectedPackage(null);
     setSelectedPayment(null);
-    setStep(4);
+    setStep(3);
   };
 
   const handleDurationSelect = (duration: number) => {
@@ -402,12 +373,11 @@ function BookingContent() {
     setSelectedPackage(null);
     setSelectedPayment(null);
     if (isPromoAvailable) {
-      setStep(5);
+      setStep(4);
     } else {
-      // Skip package selection if no promo
       setSelectedPackage("NORMAL");
       setSelectedPayment(null);
-      setStep(6);
+      setStep(5);
     }
   };
 
@@ -418,14 +388,14 @@ function BookingContent() {
     } else {
       setSelectedPayment(null);
     }
-    setStep(6);
+    setStep(5);
   };
 
   const handleGoToConfirm = () => {
     if (!selectedPayment && selectedPackage === "NORMAL") {
       setSelectedPayment("FULL");
     }
-    setStep(7);
+    setStep(6);
   };
 
   const handleSubmit = async () => {
@@ -579,8 +549,70 @@ function BookingContent() {
     );
   }
 
+  // DEVICE SELECTION PRE-STEP (shown only when no device is pre-selected from URL)
+  if (needsDeviceSelection) {
+    const availableDevices = devices.length > 0 ? devices : staticDevices;
+    return (
+      <div className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold mb-2" style={{ color: "#F5B700" }}>
+            K Gaming XCafe
+          </h1>
+          <p className="text-sm" style={{ color: "#A1A1AA" }}>
+            Pilih device yang ingin kamu booking
+          </p>
+        </div>
+
+        {!dataReady && devices.length === 0 && (
+          <div className="flex items-center justify-center py-16">
+            <p className="text-lg" style={{ color: "#A1A1AA" }}>Memuat data...</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {availableDevices.map((device) => (
+            <button
+              key={device.id}
+              onClick={() => handleDeviceSelect(device)}
+              className="rounded-xl p-5 border-2 text-left transition-all hover:border-yellow-600 hover:scale-[1.02]"
+              style={{ backgroundColor: "#1F2330", borderColor: "#3F4452" }}
+            >
+              <p className="text-lg font-bold">{device.name}</p>
+              <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
+                {getDeviceIcon(device.category)} {device.category === "VIP1" ? "VIP 1" : "VIP 2"}
+              </p>
+              <p className="text-sm font-bold mt-3" style={{ color: "#F5B700" }}>
+                {formatPrice(device.hourly_price)}
+                <span className="text-xs font-normal" style={{ color: "#A1A1AA" }}>/Jam</span>
+              </p>
+              <div className="mt-3 w-full py-2 rounded-lg text-center font-medium text-sm" style={{ backgroundColor: "#F5B700", color: "#000" }}>
+                Pilih {device.name}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Main booking flow
   return (
     <div className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
+      {/* Device Summary Bar */}
+      {selectedDevice && (
+        <div className="rounded-xl p-3 mb-4 flex items-center justify-between" style={{ backgroundColor: "#1F2330", border: "1px solid #3F4452" }}>
+          <div className="flex items-center gap-2">
+            <span>{getDeviceIcon(selectedDevice.category)}</span>
+            <div>
+              <p className="font-semibold text-sm">{selectedDevice.name}</p>
+              <p className="text-xs" style={{ color: "#A1A1AA" }}>
+                {formatPrice(selectedDevice.hourly_price)}/Jam
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Progress Indicator */}
       <div className="mb-8">
         <div className="flex justify-between text-xs mb-2" style={{ color: "#A1A1AA" }}>
@@ -618,77 +650,13 @@ function BookingContent() {
         </div>
       )}
 
-      {/* Step 1: Pilih Unit (REGULAR) or Pilih Device (VIP) */}
-      {step === 1 && isRegularFlow ? (
-        <div>
-          <h2 className="text-xl font-bold mb-4">Pilih Unit Reguler</h2>
-          <p className="text-sm mb-4" style={{ color: "#A1A1AA" }}>
-            Tersedia {regularUnits.length} unit Reguler. Pilih unit yang kamu mau:
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {regularUnits.map((device) => (
-              <button
-                key={device.id}
-                onClick={() => handleUnitSelect(device)}
-                className="rounded-xl p-4 border text-left transition-all hover:border-yellow-600"
-                style={{
-                  backgroundColor: "#1F2330",
-                  borderColor:
-                    selectedDevice?.id === device.id ? "#F5B700" : "#3F4452",
-                }}
-              >
-                <p className="font-semibold">{device.name}</p>
-                <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-                  🎮 Reguler
-                </p>
-                <p className="text-sm font-bold mt-2" style={{ color: "#F5B700" }}>
-                  {formatPrice(device.hourly_price)}
-                  <span className="text-xs font-normal" style={{ color: "#A1A1AA" }}>/Jam</span>
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : step === 1 && !isRegularFlow ? (
-        <div>
-          <h2 className="text-xl font-bold mb-4">Pilih Device</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {devices.map((device) => (
-              <button
-                key={device.id}
-                onClick={() => handleDeviceSelect(device)}
-                className="rounded-xl p-4 border text-left transition-all hover:border-yellow-600"
-                style={{
-                  backgroundColor: "#1F2330",
-                  borderColor:
-                    selectedDevice?.id === device.id ? "#F5B700" : "#3F4452",
-                }}
-              >
-                <p className="font-semibold">{device.name}</p>
-                <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-                  {device.category === "REGULAR" ? "🎮 Reguler" : device.category === "VIP1" ? "🌟 VIP 1" : "👑 VIP 2"}
-                </p>
-                <p className="text-sm font-bold mt-2" style={{ color: "#F5B700" }}>
-                  {formatPrice(device.hourly_price)}
-                  <span className="text-xs font-normal" style={{ color: "#A1A1AA" }}>/Jam</span>
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Loading state */}
-      {!dataReady && devices.length === 0 && (
-        <div className="flex-1 flex items-center justify-center py-16">
-          <p className="text-lg" style={{ color: "#A1A1AA" }}>Memuat data...</p>
-        </div>
-      )}
-
-      {/* Step 2: Pilih Tanggal */}
-      {step === 2 && (
+      {/* Step 1: Pilih Tanggal */}
+      {step === 1 && (
         <div>
           <h2 className="text-xl font-bold mb-4">Pilih Tanggal</h2>
+          <p className="text-sm mb-4" style={{ color: "#A1A1AA" }}>
+            {selectedDevice?.name} — Pilih tanggal bermain
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {getAvailableDates().map((date) => (
               <button
@@ -697,8 +665,7 @@ function BookingContent() {
                 className="rounded-xl p-3 border text-left text-sm transition-all"
                 style={{
                   backgroundColor: "#1F2330",
-                  borderColor:
-                    selectedDate === date.value ? "#F5B700" : "#3F4452",
+                  borderColor: selectedDate === date.value ? "#F5B700" : "#3F4452",
                 }}
               >
                 {date.label}
@@ -708,8 +675,8 @@ function BookingContent() {
         </div>
       )}
 
-      {/* Step 3: Pilih Jam */}
-      {step === 3 && (
+      {/* Step 2: Pilih Jam */}
+      {step === 2 && (
         <div>
           <h2 className="text-xl font-bold mb-4">Pilih Jam Bermain</h2>
           <p className="text-sm mb-4" style={{ color: "#A1A1AA" }}>
@@ -769,8 +736,8 @@ function BookingContent() {
         </div>
       )}
 
-      {/* Step 4: Pilih Durasi */}
-      {step === 4 && (
+      {/* Step 3: Pilih Durasi */}
+      {step === 3 && (
         <div>
           <h2 className="text-xl font-bold mb-4">Pilih Durasi</h2>
           <p className="text-sm mb-4" style={{ color: "#A1A1AA" }}>
@@ -798,8 +765,8 @@ function BookingContent() {
         </div>
       )}
 
-      {/* Step 5: Pilih Paket */}
-      {step === 5 && (
+      {/* Step 4: Pilih Paket */}
+      {step === 4 && (
         <div>
           <h2 className="text-xl font-bold mb-4">🎉 Pilih Paket</h2>
           <p className="text-sm mb-4" style={{ color: "#A1A1AA" }}>
@@ -851,8 +818,8 @@ function BookingContent() {
         </div>
       )}
 
-      {/* Step 6: Ringkasan */}
-      {step === 6 && (
+      {/* Step 5: Ringkasan */}
+      {step === 5 && (
         <div>
           <h2 className="text-xl font-bold mb-4">Ringkasan Booking</h2>
 
@@ -928,8 +895,8 @@ function BookingContent() {
         </div>
       )}
 
-      {/* Step 7: Konfirmasi */}
-      {step === 7 && (
+      {/* Step 6: Konfirmasi */}
+      {step === 6 && (
         <div>
           <h2 className="text-xl font-bold mb-4">Konfirmasi Booking</h2>
 

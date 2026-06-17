@@ -6,7 +6,6 @@ import { PricingRule } from "@/types/database";
 import { formatPrice } from "@/lib/utils";
 
 const staticPricing: PricingRule[] = [
-  { id: "1", category: "REGULAR", hourly_price: 10000, promo_2h_price: 18000, promo_3h_price: 25000, discount_4h_percent: 20, created_at: "", updated_at: "" },
   { id: "2", category: "VIP1", hourly_price: 30000, promo_2h_price: 55000, promo_3h_price: 80000, discount_4h_percent: 20, created_at: "", updated_at: "" },
   { id: "3", category: "VIP2", hourly_price: 35000, promo_2h_price: 65000, promo_3h_price: 90000, discount_4h_percent: 20, created_at: "", updated_at: "" },
 ];
