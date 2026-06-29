@@ -134,7 +134,7 @@ export default function HomePage() {
               </ul>
 
               <Link
-                href="/booking"
+                href={`/booking?name=${encodeURIComponent(device.label)}`}
                 className="block w-full py-2 rounded-lg text-center font-medium transition-opacity hover:opacity-90"
                 style={{ backgroundColor: "#F5B700", color: "#000" }}
               >

@@ -89,9 +89,10 @@ const getDeviceIcon = (category: string) => {
 function BookingContent() {
   const searchParams = useSearchParams();
   const deviceIdParam = searchParams.get("device");
+  const deviceNameParam = searchParams.get("name");
 
   // State: device pre-selection phase
-  const [needsDeviceSelection, setNeedsDeviceSelection] = useState(!deviceIdParam);
+  const [needsDeviceSelection, setNeedsDeviceSelection] = useState(!deviceIdParam && !deviceNameParam);
 
   // State
   const [step, setStep] = useState(1);
@@ -352,8 +353,21 @@ function BookingContent() {
         setNeedsDeviceSelection(true);
       }
       // If devices haven't loaded yet, wait for them (the effect will re-run)
+    } else if (deviceNameParam) {
+      // Find device by name (from homepage cards)
+      const device = devices.find((d) => d.name === deviceNameParam) ||
+                     staticDevices.find((d) => d.name === deviceNameParam);
+      if (device) {
+        setSelectedDevice(device);
+        setNeedsDeviceSelection(false);
+        setStep(1);
+      } else if (devices.length > 0) {
+        // Devices loaded but name not found — show selection
+        setNeedsDeviceSelection(true);
+      }
+      // If devices haven't loaded yet, wait for them (the effect will re-run)
     }
-  }, [deviceIdParam, devices]);
+  }, [deviceIdParam, deviceNameParam, devices]);
 
   // Handlers
   const handleDeviceSelect = (device: Device) => {
@@ -417,12 +431,6 @@ function BookingContent() {
 
     if (!agreedToTerms) {
       setError("Mohon setujui disclaimer terlebih dahulu");
-      return;
-    }
-
-    // VALIDASI: Pastikan device_id adalah UUID valid (dari database, bukan data statis)
-    if (!isValidUUID(selectedDevice.id)) {
-      setError("Data device belum termuat dari server. Silakan refresh halaman dan coba lagi.");
       return;
     }
 
