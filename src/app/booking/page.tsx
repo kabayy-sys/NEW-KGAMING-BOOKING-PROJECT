@@ -96,7 +96,7 @@ function BookingContent() {
   // State
   const [step, setStep] = useState(1);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>(staticPricing);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [disclaimers, setDisclaimers] = useState<Disclaimer[]>(staticDisclaimers);
   const [businessHours, setBusinessHours] = useState<Record<string, { open: string; close: string }>>({});
