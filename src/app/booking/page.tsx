@@ -221,7 +221,8 @@ function BookingContent() {
           break; // Booked takes priority
         }
         if (booking.status === "PENDING" || booking.status === "WAITING_PAYMENT") {
-          slotStatus = "pending"; // Could be overwritten by booked later
+          slotStatus = "pending";
+          break; // Pending juga stop loop, tidak perlu cek booking lain
         }
       }
 
