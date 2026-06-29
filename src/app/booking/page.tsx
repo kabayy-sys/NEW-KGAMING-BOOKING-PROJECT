@@ -18,6 +18,7 @@ import {
   getDayName,
   getTodayDate,
   formatWhatsAppNumber,
+  timeToMinutes,
 } from "@/lib/utils";
 import Link from "next/link";
 
@@ -194,7 +195,8 @@ function BookingContent() {
         if (slotMinutes <= nowMinutes) return;
       }
 
-      const slotEnd = calculateEndTime(slot, 1);
+      const slotStartMin = timeToMinutes(slot);
+      const slotEndMin = timeToMinutes(calculateEndTime(slot, 1));
 
       // Check conflicts with existing bookings for this device+date
       let slotStatus: "available" | "booked" | "pending" = "available";
@@ -204,8 +206,12 @@ function BookingContent() {
         if (booking.booking_date !== selectedDate) continue;
         if (booking.status === "EXPIRED" || booking.status === "FINISHED" || booking.status === "REJECTED") continue;
 
-        // Check time overlap
-        const hasOverlap = slot < booking.end_time && slotEnd > booking.start_time;
+        // Check time overlap using numeric minute comparison
+        // This handles cases where end_time has seconds (e.g. "15:00:00") vs slot without seconds ("15:00")
+        // Slot is blocked only if it starts BEFORE the booking ends
+        const bookingStartMin = timeToMinutes(booking.start_time);
+        const bookingEndMin = timeToMinutes(booking.end_time);
+        const hasOverlap = slotStartMin < bookingEndMin && slotEndMin > bookingStartMin;
         if (!hasOverlap) continue;
 
         // Determine status based on booking status

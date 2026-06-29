@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking, Device } from "@/types/database";
-import { formatPrice, getTodayDate, calculateEndTime, generateTimeSlots, getDayName, formatDate } from "@/lib/utils";
+import { formatPrice, getTodayDate, calculateEndTime, generateTimeSlots, getDayName, formatDate, timeToMinutes } from "@/lib/utils";
 
 const staticDevices: Device[] = [
   { id: "5", name: "VIP 1A", category: "VIP1", hourly_price: 30000, active: true, created_at: "", updated_at: "" },
@@ -150,13 +150,17 @@ export default function BookingsPage() {
 
         // Filter out slots that overlap with existing bookings
         const availableSlots = allSlots.filter((slot) => {
-          const slotEnd = calculateEndTime(slot, bookDuration);
+          const slotStartMin = timeToMinutes(slot);
+          const slotEndMin = timeToMinutes(calculateEndTime(slot, bookDuration));
 
           // For each existing booking (excluding current one), check overlap
           for (const existing of existingBookings || []) {
             if (existing.id === bookId) continue; // skip current booking
 
-            const hasOverlap = slot < existing.end_time && slotEnd > existing.start_time;
+            // Use numeric minute comparison to handle "15:00:00" vs "15:00" differences
+            const existingStartMin = timeToMinutes(existing.start_time);
+            const existingEndMin = timeToMinutes(existing.end_time);
+            const hasOverlap = slotStartMin < existingEndMin && slotEndMin > existingStartMin;
             if (hasOverlap) return false;
           }
 

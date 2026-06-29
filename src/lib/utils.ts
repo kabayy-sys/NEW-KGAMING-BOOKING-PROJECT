@@ -71,6 +71,15 @@ export function getDayName(date: Date): string {
 }
 
 /**
+ * Convert time string "HH:mm" to total minutes (numeric)
+ * Example: "13:30" => 810
+ */
+export function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
  * Calculate end time based on start time and duration
  */
 export function calculateEndTime(startTime: string, durationHours: number): string {
