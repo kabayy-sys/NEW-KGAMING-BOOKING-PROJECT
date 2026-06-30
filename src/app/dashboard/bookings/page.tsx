@@ -157,11 +157,11 @@ export default function BookingsPage() {
           for (const existing of existingBookings || []) {
             if (existing.id === bookId) continue; // skip current booking
 
-            // Use numeric minute comparison to handle "15:00:00" vs "15:00" differences
+            // Use numeric minute comparison: hanya blokir jika MULAI slot ada dalam range booking [start, end)
             const existingStartMin = timeToMinutes(existing.start_time);
             const existingEndMin = timeToMinutes(existing.end_time);
-            const hasOverlap = slotStartMin < existingEndMin && slotEndMin > existingStartMin;
-            if (hasOverlap) return false;
+            const slotStartsInsideBooking = slotStartMin >= existingStartMin && slotStartMin < existingEndMin;
+            if (slotStartsInsideBooking) return false;
           }
 
           return true;

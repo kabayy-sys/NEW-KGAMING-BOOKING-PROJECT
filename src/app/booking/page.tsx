@@ -207,13 +207,14 @@ function BookingContent() {
         if (booking.booking_date !== selectedDate) continue;
         if (booking.status === "EXPIRED" || booking.status === "FINISHED" || booking.status === "REJECTED") continue;
 
-        // Check time overlap using numeric minute comparison
-        // This handles cases where end_time has seconds (e.g. "15:00:00") vs slot without seconds ("15:00")
-        // Slot is blocked only if it starts BEFORE the booking ends
+        // Check if this slot's START time falls within the booking range [start, end)
+        // Example: booking 15:00-17:00 blocks slots 15:00, 15:30, 16:00, 16:30
+        // Slot 14:30 (start=870) is NOT blocked because 870 < 900 (booking start)
+        // Slot 17:00 (start=1020) is NOT blocked because 1020 >= 1020 (booking end)
         const bookingStartMin = timeToMinutes(booking.start_time);
         const bookingEndMin = timeToMinutes(booking.end_time);
-        const hasOverlap = slotStartMin < bookingEndMin && slotEndMin > bookingStartMin;
-        if (!hasOverlap) continue;
+        const slotStartsInsideBooking = slotStartMin >= bookingStartMin && slotStartMin < bookingEndMin;
+        if (!slotStartsInsideBooking) continue;
 
         // Determine status based on booking status
         if (booking.status === "BOOKED" || booking.status === "IN_USE") {
