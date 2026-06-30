@@ -96,7 +96,7 @@ function BookingContent() {
 
   // State
   const [step, setStep] = useState(1);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [devices, setDevices] = useState<Device[]>(staticDevices);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>(staticPricing);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [disclaimers, setDisclaimers] = useState<Disclaimer[]>(staticDisclaimers);
@@ -275,8 +275,8 @@ function BookingContent() {
       try {
         const { data: devData } = await supabase.from("devices").select("*").eq("active", true).order("name");
         if (!cancelled && devData && devData.length > 0) {
-          // Filter out REGULAR devices (safety check even if DB migration not yet applied)
-          setDevices(devData.filter((d: Device) => d.category !== "REGULAR"));
+          const realDevices = devData.filter((d: Device) => d.category !== "REGULAR");
+          setDevices(realDevices);
         }
       } catch (e) {
         console.error("Gagal load devices:", e);
@@ -338,7 +338,7 @@ function BookingContent() {
     }
 
     fetchBookings();
-  }, [selectedDate]);
+  }, [selectedDate, selectedDevice]);
 
   // Set initial device from URL param (check Supabase devices first, then static fallback)
   useEffect(() => {

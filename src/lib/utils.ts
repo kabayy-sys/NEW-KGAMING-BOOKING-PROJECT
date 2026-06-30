@@ -71,14 +71,17 @@ export function getDayName(date: Date): string {
 }
 
 /**
- * Convert time string "HH:mm" or "HH:mm:ss" or "HH:mm:ss+offset" to total minutes (numeric)
+ * Convert time string to total minutes (numeric)
+ * Handles formats: "HH:mm", "HH:mm:ss", "HH:mm:ss.123456", "HH:mm:ss+offset"
  * Example: "13:30" => 810, "15:00:00" => 900, "15:00:00+07" => 900
  */
 export function timeToMinutes(time: string): number {
-  const parts = time.split(':');
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
-  return hours * 60 + (isNaN(minutes) ? 0 : minutes);
+  // Extract first two numbers (hours and minutes) from any time format
+  const match = time.match(/(\d+):(\d+)/);
+  if (!match) return 0;
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  return hours * 60 + minutes;
 }
 
 /**
