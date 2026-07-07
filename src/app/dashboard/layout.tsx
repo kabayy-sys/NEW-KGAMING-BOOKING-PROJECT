@@ -45,7 +45,7 @@ export default function DashboardLayout({
   const handleLogout = () => {
     localStorage.removeItem("staff_authenticated");
     localStorage.removeItem("staff_username");
-    router.push("/dashboard/login");
+    router.push("/");
   };
 
   return (

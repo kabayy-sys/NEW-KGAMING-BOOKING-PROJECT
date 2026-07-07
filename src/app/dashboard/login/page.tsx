@@ -47,7 +47,7 @@ export default function StaffLoginPage() {
     if (pinCode === "2019") {
       localStorage.setItem("staff_authenticated", "true");
       localStorage.setItem("staff_username", "staff");
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } else {
       setError("PIN salah");
       setPin(["", "", "", ""]);

@@ -3,185 +3,158 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Booking, Device } from "@/types/database";
-import { formatPrice, getTodayDate } from "@/lib/utils";
-import Link from "next/link";
+import { getTodayDate } from "@/lib/utils";
+import StaffSchedule from "@/components/dashboard/staff-schedule";
 
 export default function DashboardHome() {
+  const today = getTodayDate();
+  const [selectedDate, setSelectedDate] = useState(today);
   const [stats, setStats] = useState({
     waitingPayment: 0,
     booked: 0,
     inUse: 0,
-    todayRevenue: 0,
   });
-  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchStats() {
+    async function fetchDashboard() {
       try {
-        const today = getTodayDate();
+        // Fetch all devices
+        const { data: devicesData } = await supabase.from("devices").select("*");
+        if (devicesData) setDevices(devicesData);
 
-        // Fetch today's bookings
-        const { data: todayBookings } = await supabase
+        // Fetch bookings for selected date
+        const { data: bookingsData } = await supabase
           .from("bookings")
           .select("*")
-          .eq("booking_date", today);
+          .eq("booking_date", selectedDate);
 
-        if (todayBookings) {
-          const waiting = todayBookings.filter((b: any) => b.status === "WAITING_PAYMENT").length;
-          const booked = todayBookings.filter((b: any) => b.status === "BOOKED").length;
-          const inUse = todayBookings.filter((b: any) => b.status === "IN_USE").length;
-          const revenue = todayBookings
-            .filter((b: any) => b.status !== "WAITING_PAYMENT" && b.status !== "EXPIRED")
-            .reduce((sum: number, b: any) => sum + (b.payment_amount || 0), 0);
+        if (bookingsData) {
+          const waiting = bookingsData.filter(
+            (b: any) => b.status === "WAITING_PAYMENT"
+          ).length;
+          const booked = bookingsData.filter(
+            (b: any) => b.status === "BOOKED"
+          ).length;
+          const inUse = bookingsData.filter(
+            (b: any) => b.status === "IN_USE"
+          ).length;
 
-          setStats({ waitingPayment: waiting, booked, inUse, todayRevenue: revenue });
-          setRecentBookings(todayBookings.slice(0, 10));
+          setStats({ waitingPayment: waiting, booked, inUse });
+          setBookings(bookingsData);
         }
       } catch {
-        // Use mock data if Supabase not configured
-        setStats({ waitingPayment: 0, booked: 0, inUse: 0, todayRevenue: 0 });
+        setStats({ waitingPayment: 0, booked: 0, inUse: 0 });
+        setBookings([]);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchStats();
-  }, []);
+    fetchDashboard();
+  }, [selectedDate]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "WAITING_PAYMENT": return "#EAB308";
-      case "BOOKED": return "#EF4444";
-      case "IN_USE": return "#8B5CF6";
-      case "FINISHED": return "#6B7280";
-      case "EXPIRED": return "#4B5563";
-      default: return "#6B7280";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "WAITING_PAYMENT": return "Waiting Payment";
-      case "BOOKED": return "Booked";
-      case "IN_USE": return "In Use";
-      case "FINISHED": return "Finished";
-      case "EXPIRED": return "Expired";
-      default: return status;
-    }
+  const goToDate = (days: number) => {
+    const date = new Date(selectedDate + "T12:00:00");
+    date.setDate(date.getDate() + days);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    setSelectedDate(`${year}-${month}-${day}`);
   };
 
   return (
     <div>
-      <h1 className="text-xl font-bold mb-6">Dashboard Overview</h1>
+      {/* Header with Title & Date */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <h1 className="text-xl font-bold">Dashboard</h1>
+
+        {/* Date Navigation */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => goToDate(-1)}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-80"
+            style={{ backgroundColor: "#1F2330", color: "#A1A1AA" }}
+          >
+            ◀
+          </button>
+
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-center outline-none"
+            style={{
+              backgroundColor: "#1F2330",
+              color: "#F5B700",
+              border: "1px solid #3F4452",
+            }}
+          />
+
+          <button
+            onClick={() => goToDate(1)}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-80"
+            style={{ backgroundColor: "#1F2330", color: "#A1A1AA" }}
+          >
+            ▶
+          </button>
+
+          {selectedDate !== today && (
+            <button
+              onClick={() => setSelectedDate(today)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-80"
+              style={{ backgroundColor: "#3F4452", color: "#FFF" }}
+            >
+              Hari Ini
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         <SummaryCard
           label="Waiting Payment"
-          value={`${stats.waitingPayment} Booking`}
+          value={`${stats.waitingPayment}`}
           color="#EAB308"
         />
         <SummaryCard
           label="Booked"
-          value={`${stats.booked} Booking`}
+          value={`${stats.booked}`}
           color="#EF4444"
         />
         <SummaryCard
           label="In Use"
-          value={`${stats.inUse} Device`}
+          value={`${stats.inUse}`}
           color="#8B5CF6"
         />
-        <SummaryCard
-          label="Pendapatan Hari Ini"
-          value={formatPrice(stats.todayRevenue)}
-          color="#22C55E"
-        />
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <Link
-          href="/dashboard/bookings?status=WAITING_PAYMENT"
-          className="rounded-xl p-4 text-center transition-colors"
-          style={{ backgroundColor: "#1F2330" }}
-        >
-          <p className="text-sm font-semibold" style={{ color: "#EAB308" }}>
-            ⏳ Waiting Payment
-          </p>
-          <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-            Lihat booking yang perlu diverifikasi
-          </p>
-        </Link>
-
-        <Link
-          href="/dashboard/bookings"
-          className="rounded-xl p-4 text-center transition-colors"
-          style={{ backgroundColor: "#1F2330" }}
-        >
-          <p className="text-sm font-semibold" style={{ color: "#F5B700" }}>
-            📋 Semua Booking
-          </p>
-          <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-            Kelola seluruh booking
-          </p>
-        </Link>
-
-        <Link
-          href="/dashboard/devices"
-          className="rounded-xl p-4 text-center transition-colors"
-          style={{ backgroundColor: "#1F2330" }}
-        >
-          <p className="text-sm font-semibold" style={{ color: "#22C55E" }}>
-            🎮 Status Device
-          </p>
-          <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-            Lihat status device saat ini
-          </p>
-        </Link>
-      </div>
-
-      {/* Recent Bookings */}
+      {/* Schedule Grid */}
       <div>
-        <h2 className="text-lg font-bold mb-3">Booking Hari Ini</h2>
+        <h2 className="text-lg font-bold mb-3">
+          Jadwal VIP
+          <span className="text-sm font-normal ml-2" style={{ color: "#A1A1AA" }}>
+            {selectedDate === today ? "Hari Ini" : selectedDate}
+          </span>
+        </h2>
+
         {loading ? (
-          <p className="text-sm" style={{ color: "#A1A1AA" }}>
-            Memuat data...
+          <p className="text-sm py-8 text-center" style={{ color: "#A1A1AA" }}>
+            Loading...
           </p>
-        ) : recentBookings.length === 0 ? (
+        ) : (
           <div
-            className="rounded-xl p-6 text-center"
+            className="rounded-xl p-4"
             style={{ backgroundColor: "#1F2330" }}
           >
-            <p style={{ color: "#A1A1AA" }}>Belum ada booking hari ini</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {recentBookings.map((booking) => (
-              <div
-                key={booking.id}
-                className="rounded-xl p-4 flex items-center justify-between"
-                style={{ backgroundColor: "#1F2330" }}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">
-                    {booking.customer_name}
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-                    {booking.booking_code} • {booking.start_time} - {booking.end_time}
-                  </p>
-                </div>
-                <span
-                  className="text-xs px-2 py-1 rounded-full font-medium ml-3 whitespace-nowrap"
-                  style={{
-                    backgroundColor: getStatusColor(booking.status) + "20",
-                    color: getStatusColor(booking.status),
-                  }}
-                >
-                  {getStatusLabel(booking.status)}
-                </span>
-              </div>
-            ))}
+            <StaffSchedule
+              devices={devices}
+              bookings={bookings}
+              selectedDate={selectedDate}
+            />
           </div>
         )}
       </div>
@@ -200,15 +173,16 @@ function SummaryCard({
 }) {
   return (
     <div
-      className="rounded-xl p-4"
+      className="rounded-xl p-4 flex flex-col items-center justify-center text-center"
       style={{ backgroundColor: "#1F2330" }}
     >
-      <p className="text-xs mb-1" style={{ color: "#A1A1AA" }}>
-        {label}
-      </p>
-      <p className="text-lg font-bold" style={{ color }}>
+      <p className="text-2xl font-black" style={{ color }}>
         {value}
+      </p>
+      <p className="text-[10px] mt-1 font-medium" style={{ color: "#A1A1AA" }}>
+        {label}
       </p>
     </div>
   );
 }
+
