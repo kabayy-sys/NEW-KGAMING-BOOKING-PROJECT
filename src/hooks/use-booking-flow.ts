@@ -140,8 +140,8 @@ export function useBookingFlow(
   const durationHours = useMemo(() => {
     if (state.selectionStart === null || state.selectionEnd === null) return 0;
     const diff = Math.abs(state.selectionEnd - state.selectionStart);
-    // Each slot is 30 min, convert to hours (no +1 because end time is exclusive)
-    return Math.ceil((diff * 30) / 60);
+    // Each slot is 1 jam, diff langsung = durasi dalam jam (no +1 because end time is exclusive)
+    return diff;
   }, [state.selectionStart, state.selectionEnd]);
 
   const endTime = useMemo(() => {
