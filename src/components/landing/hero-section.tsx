@@ -51,9 +51,7 @@ export default function HeroSection() {
 
         {/* Tagline */}
         <p className="text-base sm:text-lg mt-6 mb-10 leading-relaxed" style={{ color: "#A1A1AA" }}>
-          Premium PlayStation gaming lounge.
-          <br />
-          Book your session in seconds, play in style.
+          Welcome to KGaming XCafe, a premium gaming destination in Pontianak where entertainment meets comfort. Whether you're here for casual gaming, competitive matches, or quality time with friends, we offer PlayStation 4, PlayStation 5, Nintendo Switch, exclusive VIP rooms, and a cozy café experience. Check real-time availability, reserve your preferred room online, and enjoy a seamless gaming experience from start to finish.
         </p>
 
         {/* CTA Buttons */}
