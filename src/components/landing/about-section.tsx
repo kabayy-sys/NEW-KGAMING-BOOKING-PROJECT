@@ -58,14 +58,8 @@ export default function AboutSection() {
               <span className="text-gold-gradient">Gaming</span>
             </h2>
 
-            <p className="text-sm sm:text-base leading-relaxed mb-4" style={{ color: "#A1A1AA" }}>
-              K Gaming XCafe is Bandung's premier gaming lounge, offering premium PlayStation
-              and Nintendo Switch experiences in a comfortable, air-conditioned environment.
-            </p>
-
             <p className="text-sm sm:text-base leading-relaxed" style={{ color: "#A1A1AA" }}>
-              Whether you're a casual player or a competitive gamer, our lounge provides
-              the perfect setting for unforgettable gaming sessions with friends.
+              Welcome to KGaming XCafe, a premium gaming destination in Pontianak where entertainment meets comfort. Whether you're here for casual gaming, competitive matches, or quality time with friends, we offer PlayStation 4, PlayStation 5, Nintendo Switch, exclusive VIP rooms, and a cozy café experience. Check real-time availability, reserve your preferred room online, and enjoy a seamless gaming experience from start to finish.
             </p>
 
             {/* Quick stats */}
