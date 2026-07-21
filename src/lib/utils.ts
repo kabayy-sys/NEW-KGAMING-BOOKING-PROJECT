@@ -97,9 +97,9 @@ export function calculateEndTime(startTime: string, durationHours: number): stri
 }
 
 /**
- * Generate time slots (30-minute intervals)
+ * Generate time slots (1-hour intervals)
  * For overnight hours (close <= open), close is treated as next day.
- * The closing hour itself is excluded (e.g. if close=01:00, last slot is 00:30).
+ * The closing hour itself is excluded (e.g. if close=01:00, last slot is 00:00).
  */
 export function generateTimeSlots(
   openTime: string,

@@ -86,14 +86,31 @@ export function useBookingFlow(
 
     const today = getTodayDate();
     const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    // Check if this is an overnight schedule (close <= open, e.g. 10:00 - 01:00)
+    const isOvernight = timeToMinutes(dayHours.close) <= timeToMinutes(dayHours.open);
 
     return allTimeSlots.map((time, index) => {
-      // Skip past slots for today
+      // Skip past slots for today (handle overnight correctly)
       if (state.selectedDate === today) {
         const [h, m] = time.split(":").map(Number);
         const slotMin = h * 60 + m;
-        const nowMin = now.getHours() * 60 + now.getMinutes();
-        if (slotMin <= nowMin) return { time, status: "maintenance" as const, index };
+
+        // For overnight schedules, slots before opening time (like 00:00, 01:00)
+        // belong to the "next day" session and should NOT be marked as past
+        if (isOvernight && slotMin < timeToMinutes(dayHours.open)) {
+          // These are after-midnight slots for the overnight session
+          // They are only "past" if the current time has passed closing time
+          // E.g., if close is 01:00 and now is 12:00, these slots are NOT past
+          // But if now is 02:00 and close is 01:00, the overnight session has ended
+          if (nowMin >= timeToMinutes(dayHours.close) + 24 * 60) {
+            return { time, status: "maintenance" as const, index };
+          }
+        } else {
+          // Normal daytime slot - check if it's already past
+          if (slotMin <= nowMin) return { time, status: "maintenance" as const, index };
+        }
       }
 
       // Check if selected
@@ -177,8 +194,30 @@ export function useBookingFlow(
   }, [selectedPricing, durationHours, state.selectedPackage, isPromoAvailable]);
 
   const isSelectionValid = useMemo(() => {
-    return state.selectionStart !== null && state.selectionEnd !== null && durationHours >= 1;
-  }, [state.selectionStart, state.selectionEnd, durationHours]);
+    if (state.selectionStart === null || state.selectionEnd === null || durationHours < 1) return false;
+
+    // Validate that end time doesn't exceed closing time
+    if (startTime && dayHours) {
+      const end = calculateEndTime(startTime, durationHours);
+
+      // For overnight schedules (e.g., close at 01:00 next day):
+      // end time must not exceed close time + 24h (meaning next day's close)
+      const startMin = timeToMinutes(startTime);
+      const endMin = timeToMinutes(end);
+      const closeMin = timeToMinutes(dayHours.close);
+      const openMin = timeToMinutes(dayHours.open);
+
+      const isOvernight = closeMin <= openMin;
+      const adjustedCloseMin = isOvernight ? closeMin + 24 * 60 : closeMin;
+      const adjustedEndMin = endMin < openMin ? endMin + 24 * 60 : endMin;
+
+      if (adjustedEndMin > adjustedCloseMin) {
+        return false;
+      }
+    }
+
+    return true;
+  }, [state.selectionStart, state.selectionEnd, durationHours, startTime, dayHours]);
 
   // --- Actions ---
 

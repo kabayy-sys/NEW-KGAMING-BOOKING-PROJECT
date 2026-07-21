@@ -40,16 +40,38 @@ export default function VipSchedule({
     const result: Record<string, TimeSlotInfo[]> = {};
     const today = getTodayDate();
     const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    // Determine if this is an overnight schedule (close <= open, e.g. 10:00 - 01:00)
+    // by checking if the last slot time is less than the first slot time
+    const isOvernight = allTimeSlots.length > 0 && timeToMinutes(allTimeSlots[allTimeSlots.length - 1]) < timeToMinutes(allTimeSlots[0]);
+
+    // Calculate closing time (last slot + 1 hour)
+    const firstSlotMin = allTimeSlots.length > 0 ? timeToMinutes(allTimeSlots[0]) : 600;
+    const lastSlotMin = allTimeSlots.length > 0 ? timeToMinutes(allTimeSlots[allTimeSlots.length - 1]) : 0;
+    const closeMin = isOvernight ? lastSlotMin + 60 : lastSlotMin + 60;
 
     for (const device of vipDevices) {
       result[device.id] = allTimeSlots.map((time, index) => {
-        // Skip past slots for today
+        // Skip past slots for today (handle overnight correctly)
         if (selectedDate === today) {
           const [h, m] = time.split(":").map(Number);
           const slotMin = h * 60 + m;
-          const nowMin = now.getHours() * 60 + now.getMinutes();
-          if (slotMin <= nowMin) {
-            return { time, status: "maintenance" as const, index };
+
+          // For overnight schedules, slots before opening time (like 00:00, 01:00)
+          // belong to the "next day" session and should NOT be marked as past
+          if (isOvernight && slotMin < firstSlotMin) {
+            // These are after-midnight slots - only "past" if now has passed next day's closing time
+            // E.g., if close is 01:00, then 00:00 is only past if now >= 01:00 + 24h = 25:00 (1500 min)
+            const adjustedCloseMin = closeMin + 24 * 60;
+            if (nowMin >= adjustedCloseMin) {
+              return { time, status: "maintenance" as const, index };
+            }
+          } else {
+            // Normal daytime slot - check if it's already past
+            if (slotMin <= nowMin) {
+              return { time, status: "maintenance" as const, index };
+            }
           }
         }
 
