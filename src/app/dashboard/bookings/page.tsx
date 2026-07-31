@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking, Device } from "@/types/database";
-import { formatPrice, getTodayDate, calculateEndTime, generateTimeSlots, getDayName, formatDate, timeToMinutes } from "@/lib/utils";
+import { formatPrice, getTodayDate, calculateEndTime, generateTimeSlots, getDayName, formatDate, timeToMinutes, isSlotInBookingRange } from "@/lib/utils";
 
 const staticDevices: Device[] = [
   { id: "5", name: "VIP 1A", category: "VIP1", hourly_price: 30000, active: true, created_at: "", updated_at: "" },
@@ -150,18 +150,12 @@ export default function BookingsPage() {
 
         // Filter out slots that overlap with existing bookings
         const availableSlots = allSlots.filter((slot) => {
-          const slotStartMin = timeToMinutes(slot);
-          const slotEndMin = timeToMinutes(calculateEndTime(slot, bookDuration));
-
           // For each existing booking (excluding current one), check overlap
           for (const existing of existingBookings || []) {
             if (existing.id === bookId) continue; // skip current booking
 
-            // Use numeric minute comparison: hanya blokir jika MULAI slot ada dalam range booking [start, end)
-            const existingStartMin = timeToMinutes(existing.start_time);
-            const existingEndMin = timeToMinutes(existing.end_time);
-            const slotStartsInsideBooking = slotStartMin >= existingStartMin && slotStartMin < existingEndMin;
-            if (slotStartsInsideBooking) return false;
+            // Use overnight-aware conflict detection (handles cross-midnight bookings)
+            if (isSlotInBookingRange(slot, existing.start_time, existing.end_time)) return false;
           }
 
           return true;

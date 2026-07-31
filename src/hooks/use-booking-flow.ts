@@ -12,6 +12,7 @@ import {
   getTodayDate,
   formatWhatsAppNumber,
   timeToMinutes,
+  isSlotInBookingRange,
 } from "@/lib/utils";
 
 export type SlotStatus = "available" | "pending" | "booked" | "inuse" | "maintenance";
@@ -123,19 +124,13 @@ export function useBookingFlow(
       }
 
       // Check conflicts with existing bookings
-      const slotStartMin = timeToMinutes(time);
-
       for (const booking of bookings) {
         if (booking.device_id !== currentDevice.id) continue;
         if (booking.booking_date !== state.selectedDate) continue;
         if (booking.status === "EXPIRED" || booking.status === "FINISHED" || booking.status === "REJECTED") continue;
 
-        const bookingStartMin = timeToMinutes(booking.start_time);
-        const bookingEndMin = timeToMinutes(booking.end_time);
-        // Slot is blocked if it starts WITHIN the booking range
-        // The end time itself is NOT blocked (slotStartMin < bookingEndMin, not <=)
-        const slotStartsInside = slotStartMin >= bookingStartMin && slotStartMin < bookingEndMin;
-        if (!slotStartsInside) continue;
+        // Use overnight-aware conflict detection (handles cross-midnight bookings)
+        if (!isSlotInBookingRange(time, booking.start_time, booking.end_time)) continue;
 
         if (booking.status === "BOOKED" || booking.status === "IN_USE") {
           return { time, status: "booked" as const, index };

@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { Booking, Device } from "@/types/database";
-import { generateTimeSlots, timeToMinutes, getTodayDate } from "@/lib/utils";
+import { generateTimeSlots, timeToMinutes, getTodayDate, isSlotInBookingRange } from "@/lib/utils";
 
 interface StaffScheduleProps {
   devices: Device[];
@@ -28,20 +28,37 @@ export default function StaffSchedule({ devices, bookings, selectedDate }: Staff
     const result: Record<string, { time: string; status: SlotStatus }[]> = {};
     const today = getTodayDate();
     const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    // Determine if this is an overnight schedule (close <= open, e.g. 10:00 - 03:00)
+    // by checking if the last slot time is less than the first slot time
+    const isOvernight = allTimeSlots.length > 0 && timeToMinutes(allTimeSlots[allTimeSlots.length - 1]) < timeToMinutes(allTimeSlots[0]);
+    const firstSlotMin = allTimeSlots.length > 0 ? timeToMinutes(allTimeSlots[0]) : 600;
+    const lastSlotMin = allTimeSlots.length > 0 ? timeToMinutes(allTimeSlots[allTimeSlots.length - 1]) : 0;
+    const closeMin = lastSlotMin + 60;
 
     for (const device of vipDevices) {
       result[device.id] = allTimeSlots.map((time) => {
-        // Skip past slots for today
+        // Skip past slots for today (handle overnight correctly)
         if (selectedDate === today) {
           const [h, m] = time.split(":").map(Number);
           const slotMin = h * 60 + m;
-          const nowMin = now.getHours() * 60 + now.getMinutes();
-          if (slotMin <= nowMin) {
-            return { time, status: "maintenance" as SlotStatus };
+
+          // For overnight schedules, slots before opening time (like 00:00, 01:00, 02:00)
+          // belong to the "next day" session and should NOT be marked as past
+          if (isOvernight && slotMin < firstSlotMin) {
+            // After-midnight slots - only "past" if now has passed next day's closing time
+            const adjustedCloseMin = closeMin + 24 * 60;
+            if (nowMin >= adjustedCloseMin) {
+              return { time, status: "maintenance" as SlotStatus };
+            }
+          } else {
+            // Normal daytime slot - check if it's already past
+            if (slotMin <= nowMin) {
+              return { time, status: "maintenance" as SlotStatus };
+            }
           }
         }
-
-        const slotStartMin = timeToMinutes(time);
 
         for (const booking of bookings) {
           if (booking.device_id !== device.id) continue;
@@ -53,11 +70,8 @@ export default function StaffSchedule({ devices, bookings, selectedDate }: Staff
           )
             continue;
 
-          const bookingStartMin = timeToMinutes(booking.start_time);
-          const bookingEndMin = timeToMinutes(booking.end_time);
-          const slotStartsInside =
-            slotStartMin >= bookingStartMin && slotStartMin < bookingEndMin;
-          if (!slotStartsInside) continue;
+          // Use overnight-aware conflict detection (handles cross-midnight bookings)
+          if (!isSlotInBookingRange(time, booking.start_time, booking.end_time)) continue;
 
           if (booking.status === "BOOKED") {
             return { time, status: "booked" as SlotStatus };

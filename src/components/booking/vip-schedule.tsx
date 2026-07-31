@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Device, Booking } from "@/types/database";
 import { TimeSlotInfo } from "@/hooks/use-booking-flow";
-import { timeToMinutes, getTodayDate } from "@/lib/utils";
+import { timeToMinutes, getTodayDate, isSlotInBookingRange } from "@/lib/utils";
 import ScheduleCell from "./schedule-cell";
 
 interface VipScheduleProps {
@@ -88,13 +88,8 @@ export default function VipSchedule({
           )
             continue;
 
-          const bookingStartMin = timeToMinutes(booking.start_time);
-          const bookingEndMin = timeToMinutes(booking.end_time);
-          // Slot is blocked if it starts WITHIN the booking range
-          // The end time itself is NOT blocked (slotStartMin < bookingEndMin, not <=)
-          const slotStartsInside =
-            slotStartMin >= bookingStartMin && slotStartMin < bookingEndMin;
-          if (!slotStartsInside) continue;
+          // Use overnight-aware conflict detection (handles cross-midnight bookings)
+          if (!isSlotInBookingRange(time, booking.start_time, booking.end_time)) continue;
 
           if (booking.status === "BOOKED" || booking.status === "IN_USE") {
             return { time, status: "booked" as const, index };

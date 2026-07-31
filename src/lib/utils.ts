@@ -85,6 +85,42 @@ export function timeToMinutes(time: string): number {
 }
 
 /**
+ * Check if a slot time falls within a booking's time range.
+ * Handles overnight (cross-midnight) bookings where end_time < start_time.
+ * The end time is exclusive (slot at end_time is NOT blocked).
+ *
+ * Examples:
+ *   isSlotInBookingRange("22:00", "22:00", "00:00") → true  (overnight)
+ *   isSlotInBookingRange("23:00", "22:00", "00:00") → true  (overnight)
+ *   isSlotInBookingRange("00:00", "22:00", "00:00") → false (end exclusive)
+ *   isSlotInBookingRange("10:00", "10:00", "12:00") → true  (normal)
+ *   isSlotInBookingRange("12:00", "10:00", "12:00") → false (end exclusive)
+ */
+export function isSlotInBookingRange(
+  slotTime: string,
+  bookingStartTime: string,
+  bookingEndTime: string
+): boolean {
+  const slotMin = timeToMinutes(slotTime);
+  const startMin = timeToMinutes(bookingStartTime);
+  let endMin = timeToMinutes(bookingEndTime);
+
+  // Handle overnight: if end <= start, the booking crosses midnight
+  if (endMin <= startMin) {
+    endMin += 24 * 60; // Add 24h to end time
+    // If slot is before start (after midnight), adjust it too
+    let adjustedSlotMin = slotMin;
+    if (slotMin < startMin) {
+      adjustedSlotMin = slotMin + 24 * 60;
+    }
+    return adjustedSlotMin >= startMin && adjustedSlotMin < endMin;
+  }
+
+  // Normal (non-overnight) booking
+  return slotMin >= startMin && slotMin < endMin;
+}
+
+/**
  * Calculate end time based on start time and duration
  */
 export function calculateEndTime(startTime: string, durationHours: number): string {
