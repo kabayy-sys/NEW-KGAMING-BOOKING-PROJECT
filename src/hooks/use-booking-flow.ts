@@ -164,29 +164,51 @@ export function useBookingFlow(
   }, [state.selectionStart, durationHours, allTimeSlots]);
 
   const isPromoAvailable = useMemo(() => {
-    if (!state.selectedDate) return false;
+    if (!state.selectedDate || !selectedPricing) return false;
     const day = new Date(state.selectedDate + "T12:00:00").getDay();
-    return day >= 1 && day <= 4; // Monday-Thursday
-  }, [state.selectedDate]);
+    const promoDays = selectedPricing.promo_days || [1, 2, 3, 4, 5];
+    return promoDays.includes(day);
+  }, [state.selectedDate, selectedPricing]);
 
   const totalPrice = useMemo(() => {
-    if (!selectedPricing || !durationHours) return 0;
+    if (!selectedPricing || !durationHours || state.selectionStart === null) return 0;
 
-    if (state.selectedPackage === "PROMO" && isPromoAvailable) {
-      if (durationHours === 2) return selectedPricing.promo_2h_price;
-      if (durationHours === 3) return selectedPricing.promo_3h_price;
-      if (durationHours >= 4) {
-        return Math.round(selectedPricing.hourly_price * durationHours * (1 - selectedPricing.discount_4h_percent / 100));
+    let total = 0;
+    const day = state.selectedDate ? new Date(state.selectedDate + "T12:00:00").getDay() : 1;
+    const promoDays = selectedPricing.promo_days || [1, 2, 3, 4, 5];
+    const isPromoDay = promoDays.includes(day);
+    const hhEnabled = selectedPricing.happy_hour_enabled;
+    const hhStartMin = timeToMinutes(selectedPricing.happy_hour_start || "10:00");
+    const hhEndMin = timeToMinutes(selectedPricing.happy_hour_end || "16:00");
+    const hhPrice = Number(selectedPricing.happy_hour_price || 0);
+    const normalPrice = Number(selectedPricing.hourly_price || 0);
+
+    for (let i = 0; i < durationHours; i++) {
+      const slotIndex = state.selectionStart + i;
+      const slotTime = allTimeSlots[slotIndex];
+      if (!slotTime) {
+        total += normalPrice;
+        continue;
       }
-      return selectedPricing.hourly_price * durationHours;
+      const slotMin = timeToMinutes(slotTime);
+
+      let slotPrice = normalPrice;
+      if (hhEnabled && isPromoDay && hhPrice > 0) {
+        if (slotMin >= hhStartMin && slotMin < hhEndMin) {
+          slotPrice = hhPrice;
+        }
+      }
+      total += slotPrice;
     }
 
-    // Normal price with discount for 4h+ on promo days
-    if (durationHours >= 4 && isPromoAvailable) {
-      return Math.round(selectedPricing.hourly_price * durationHours * (1 - selectedPricing.discount_4h_percent / 100));
+    // Apply 4h+ discount if applicable on promo days
+    if (durationHours >= 4 && isPromoDay && selectedPricing.discount_4h_percent) {
+      const rawSum = normalPrice * durationHours;
+      return Math.round(rawSum * (1 - selectedPricing.discount_4h_percent / 100));
     }
-    return selectedPricing.hourly_price * durationHours;
-  }, [selectedPricing, durationHours, state.selectedPackage, isPromoAvailable]);
+
+    return total;
+  }, [selectedPricing, durationHours, state.selectionStart, state.selectedDate, allTimeSlots]);
 
   const isSelectionValid = useMemo(() => {
     if (state.selectionStart === null || state.selectionEnd === null || durationHours < 1) return false;
