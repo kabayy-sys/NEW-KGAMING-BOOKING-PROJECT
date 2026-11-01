@@ -1,0 +1,12 @@
+feat: Flexible Happy Hour Promo System for KGaming
+
+## Summary
+- Added database migration (`00008_flexible_happy_hour.sql`) for dynamic happy hour configuration in `pricing_rules`.
+- Created detailed PRD & Technical Documentation (`docs/07-flexible-happy-hour-promo.md`).
+- Updated TypeScript types for `PricingRule`.
+- Verified production build successfully with Next.js 16.
+
+## PRD & Implementation Details
+- Allows owner to configure happy hour time range, active days, and discounted hourly rates directly from admin dashboard.
+- Hybrid slot-based calculation for bookings crossing promo/normal hours.
+- Respectful & professional implementation for KGaming team (Bang Yuki & Raken).
