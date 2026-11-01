@@ -173,11 +173,8 @@ export function useBookingFlow(
   const normalTotalPrice = useMemo(() => {
     if (!selectedPricing || !durationHours) return 0;
     const normalPrice = Number(selectedPricing.hourly_price || 0);
-    if (durationHours >= 4 && isPromoAvailable) {
-      return Math.round(normalPrice * durationHours * (1 - selectedPricing.discount_4h_percent / 100));
-    }
     return normalPrice * durationHours;
-  }, [selectedPricing, durationHours, isPromoAvailable]);
+  }, [selectedPricing, durationHours]);
 
   const promoTotalPrice = useMemo(() => {
     if (!selectedPricing || !durationHours || state.selectionStart === null || !isPromoAvailable) return normalTotalPrice;
@@ -213,12 +210,6 @@ export function useBookingFlow(
         }
       }
       total += slotPrice;
-    }
-
-    // Apply 4h+ discount if applicable on promo days
-    if (durationHours >= 4 && isPromoDay && selectedPricing.discount_4h_percent) {
-      const rawSum = normalPrice * durationHours;
-      return Math.round(rawSum * (1 - selectedPricing.discount_4h_percent / 100));
     }
 
     return total;
