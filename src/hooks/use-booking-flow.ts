@@ -173,6 +173,16 @@ export function useBookingFlow(
   const totalPrice = useMemo(() => {
     if (!selectedPricing || !durationHours || state.selectionStart === null) return 0;
 
+    const normalPrice = Number(selectedPricing.hourly_price || 0);
+
+    // If user selected NORMAL package, always use normal hourly price
+    if (state.selectedPackage !== "PROMO" || !isPromoAvailable) {
+      if (durationHours >= 4 && isPromoAvailable) {
+        return Math.round(normalPrice * durationHours * (1 - selectedPricing.discount_4h_percent / 100));
+      }
+      return normalPrice * durationHours;
+    }
+
     let total = 0;
     const day = state.selectedDate ? new Date(state.selectedDate + "T12:00:00").getDay() : 1;
     const promoDays = selectedPricing.promo_days || [1, 2, 3, 4, 5];
@@ -180,7 +190,6 @@ export function useBookingFlow(
     const hhEnabled = selectedPricing.happy_hour_enabled ?? true;
     const hhStartMin = timeToMinutes(selectedPricing.happy_hour_start || "10:00");
     const hhEndMin = timeToMinutes(selectedPricing.happy_hour_end || "16:00");
-    const normalPrice = Number(selectedPricing.hourly_price || 0);
     let hhPrice = Number(selectedPricing.happy_hour_price || 0);
     if (hhPrice <= 0) {
       if (selectedPricing.category === "VIP1") hhPrice = 25000;
@@ -213,7 +222,7 @@ export function useBookingFlow(
     }
 
     return total;
-  }, [selectedPricing, durationHours, state.selectionStart, state.selectedDate, allTimeSlots]);
+  }, [selectedPricing, durationHours, state.selectionStart, state.selectedDate, allTimeSlots, state.selectedPackage, isPromoAvailable]);
 
   const isSelectionValid = useMemo(() => {
     if (state.selectionStart === null || state.selectionEnd === null || durationHours < 1) return false;
