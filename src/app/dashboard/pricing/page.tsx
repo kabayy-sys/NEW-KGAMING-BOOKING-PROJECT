@@ -5,8 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { PricingRule } from "@/types/database";
 
 const staticPricing: PricingRule[] = [
-  { id: "2", category: "VIP1", hourly_price: 30000, promo_2h_price: 55000, promo_3h_price: 80000, discount_4h_percent: 20, happy_hour_enabled: true, happy_hour_start: "10:00", happy_hour_end: "16:00", happy_hour_price: 25000, promo_days: [1,2,3,4,5], created_at: "", updated_at: "" },
-  { id: "3", category: "VIP2", hourly_price: 35000, promo_2h_price: 65000, promo_3h_price: 90000, discount_4h_percent: 20, happy_hour_enabled: true, happy_hour_start: "10:00", happy_hour_end: "16:00", happy_hour_price: 30000, promo_days: [1,2,3,4,5], created_at: "", updated_at: "" },
+  { id: "2", category: "VIP1", hourly_price: 30000, promo_2h_price: 55000, promo_3h_price: 80000, discount_4h_percent: 0, happy_hour_enabled: true, happy_hour_start: "10:00", happy_hour_end: "16:00", happy_hour_price: 25000, promo_days: [1,2,3,4,5], created_at: "", updated_at: "" },
+  { id: "3", category: "VIP2", hourly_price: 35000, promo_2h_price: 65000, promo_3h_price: 90000, discount_4h_percent: 0, happy_hour_enabled: true, happy_hour_start: "10:00", happy_hour_end: "16:00", happy_hour_price: 30000, promo_days: [1,2,3,4,5], created_at: "", updated_at: "" },
 ];
 
 const DAYS_OF_WEEK = [
@@ -53,7 +53,7 @@ export default function PricingPage() {
             hourly_price: rule.hourly_price,
             promo_2h_price: rule.promo_2h_price,
             promo_3h_price: rule.promo_3h_price,
-            discount_4h_percent: rule.discount_4h_percent,
+            discount_4h_percent: 0,
             happy_hour_enabled: rule.happy_hour_enabled ?? false,
             happy_hour_start: rule.happy_hour_start ?? "10:00",
             happy_hour_end: rule.happy_hour_end ?? "16:00",
@@ -123,32 +123,18 @@ export default function PricingPage() {
                 {rule.category}
               </h3>
 
-              {/* Normal & Package Prices */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
-                    Harga Normal per Jam (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    value={rule.hourly_price}
-                    onChange={(e) => updatePricing(index, "hourly_price", Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg text-sm text-white"
-                    style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
-                    Diskon 4 Jam+ (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={rule.discount_4h_percent}
-                    onChange={(e) => updatePricing(index, "discount_4h_percent", Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg text-sm text-white"
-                    style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
-                  />
-                </div>
+              {/* Normal Price */}
+              <div>
+                <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
+                  Harga Normal per Jam (Rp)
+                </label>
+                <input
+                  type="number"
+                  value={rule.hourly_price}
+                  onChange={(e) => updatePricing(index, "hourly_price", Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-lg text-sm text-white"
+                  style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
+                />
               </div>
 
               {/* Happy Hour Settings */}
