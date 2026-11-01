@@ -9,6 +9,16 @@ const staticPricing: PricingRule[] = [
   { id: "3", category: "VIP2", hourly_price: 35000, promo_2h_price: 65000, promo_3h_price: 90000, discount_4h_percent: 20, happy_hour_enabled: true, happy_hour_start: "10:00", happy_hour_end: "16:00", happy_hour_price: 30000, promo_days: [1,2,3,4,5], created_at: "", updated_at: "" },
 ];
 
+const DAYS_OF_WEEK = [
+  { id: 1, label: "Senin" },
+  { id: 2, label: "Selasa" },
+  { id: 3, label: "Rabu" },
+  { id: 4, label: "Kamis" },
+  { id: 5, label: "Jumat" },
+  { id: 6, label: "Sabtu" },
+  { id: 0, label: "Minggu" },
+];
+
 export default function PricingPage() {
   const [pricing, setPricing] = useState<PricingRule[]>(staticPricing);
   const [loading, setLoading] = useState(true);
@@ -64,6 +74,22 @@ export default function PricingPage() {
   const updatePricing = (index: number, field: keyof PricingRule, value: unknown) => {
     setPricing((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+    );
+  };
+
+  const toggleDay = (index: number, dayId: number) => {
+    setPricing((prev) =>
+      prev.map((p, i) => {
+        if (i !== index) return p;
+        const currentDays = p.promo_days || [1, 2, 3, 4, 5];
+        let updatedDays: number[];
+        if (currentDays.includes(dayId)) {
+          updatedDays = currentDays.filter((d) => d !== dayId);
+        } else {
+          updatedDays = [...currentDays, dayId].sort();
+        }
+        return { ...p, promo_days: updatedDays };
+      })
     );
   };
 
@@ -128,7 +154,7 @@ export default function PricingPage() {
               {/* Happy Hour Settings */}
               <div className="pt-3 border-t border-[#3F4452] space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-white">Happy Hour Promo (November)</span>
+                  <span className="text-sm font-semibold text-white">Happy Hour Promo</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -141,42 +167,71 @@ export default function PricingPage() {
                 </div>
 
                 {rule.happy_hour_enabled && (
-                  <div className="grid grid-cols-3 gap-3 pt-2">
-                    <div>
-                      <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
-                        Tarif Happy Hour (Rp/Jam)
-                      </label>
-                      <input
-                        type="number"
-                        value={rule.happy_hour_price ?? 0}
-                        onChange={(e) => updatePricing(index, "happy_hour_price", Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-lg text-sm text-white"
-                        style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
-                      />
+                  <div className="space-y-3 pt-2">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
+                          Tarif Happy Hour (Rp/Jam)
+                        </label>
+                        <input
+                          type="number"
+                          value={rule.happy_hour_price ?? 0}
+                          onChange={(e) => updatePricing(index, "happy_hour_price", Number(e.target.value))}
+                          className="w-full px-3 py-2 rounded-lg text-sm text-white"
+                          style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
+                          Jam Mulai
+                        </label>
+                        <input
+                          type="text"
+                          value={rule.happy_hour_start ?? "10:00"}
+                          onChange={(e) => updatePricing(index, "happy_hour_start", e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg text-sm text-white"
+                          style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
+                          Jam Selesai
+                        </label>
+                        <input
+                          type="text"
+                          value={rule.happy_hour_end ?? "16:00"}
+                          onChange={(e) => updatePricing(index, "happy_hour_end", e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg text-sm text-white"
+                          style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
+                        />
+                      </div>
                     </div>
+
+                    {/* Day Selector Checkboxes */}
                     <div>
-                      <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
-                        Jam Mulai
+                      <label className="text-xs mb-2 block" style={{ color: "#A1A1AA" }}>
+                        Hari Berlaku Promo
                       </label>
-                      <input
-                        type="text"
-                        value={rule.happy_hour_start ?? "10:00"}
-                        onChange={(e) => updatePricing(index, "happy_hour_start", e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg text-sm text-white"
-                        style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs mb-1 block" style={{ color: "#A1A1AA" }}>
-                        Jam Selesai
-                      </label>
-                      <input
-                        type="text"
-                        value={rule.happy_hour_end ?? "16:00"}
-                        onChange={(e) => updatePricing(index, "happy_hour_end", e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg text-sm text-white"
-                        style={{ backgroundColor: "#171923", border: "1px solid #3F4452" }}
-                      />
+                      <div className="flex flex-wrap gap-2">
+                        {DAYS_OF_WEEK.map((day) => {
+                          const isChecked = (rule.promo_days || [1, 2, 3, 4, 5]).includes(day.id);
+                          return (
+                            <button
+                              key={day.id}
+                              type="button"
+                              onClick={() => toggleDay(index, day.id)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                              style={{
+                                backgroundColor: isChecked ? "#F5B700" : "#171923",
+                                color: isChecked ? "#000" : "#A1A1AA",
+                                border: `1px solid ${isChecked ? "#F5B700" : "#3F4452"}`,
+                              }}
+                            >
+                              {day.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
