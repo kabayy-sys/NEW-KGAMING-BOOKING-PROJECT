@@ -177,11 +177,16 @@ export function useBookingFlow(
     const day = state.selectedDate ? new Date(state.selectedDate + "T12:00:00").getDay() : 1;
     const promoDays = selectedPricing.promo_days || [1, 2, 3, 4, 5];
     const isPromoDay = promoDays.includes(day);
-    const hhEnabled = selectedPricing.happy_hour_enabled;
+    const hhEnabled = selectedPricing.happy_hour_enabled ?? true;
     const hhStartMin = timeToMinutes(selectedPricing.happy_hour_start || "10:00");
     const hhEndMin = timeToMinutes(selectedPricing.happy_hour_end || "16:00");
-    const hhPrice = Number(selectedPricing.happy_hour_price || 0);
     const normalPrice = Number(selectedPricing.hourly_price || 0);
+    let hhPrice = Number(selectedPricing.happy_hour_price || 0);
+    if (hhPrice <= 0) {
+      if (selectedPricing.category === "VIP1") hhPrice = 25000;
+      else if (selectedPricing.category === "VIP2") hhPrice = 30000;
+      else hhPrice = normalPrice;
+    }
 
     for (let i = 0; i < durationHours; i++) {
       const slotIndex = state.selectionStart + i;
