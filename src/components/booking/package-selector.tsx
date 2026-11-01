@@ -10,6 +10,8 @@ interface PackageSelectorProps {
   isPromoAvailable: boolean;
   durationHours: number;
   totalPrice: number;
+  promoTotalPrice: number;
+  normalTotalPrice: number;
   onSelectPackage: (pkg: "PROMO" | "NORMAL") => void;
   onSelectPayment: (payment: "DP" | "FULL") => void;
   onContinue: () => void;
@@ -22,6 +24,8 @@ export default function PackageSelector({
   isPromoAvailable,
   durationHours,
   totalPrice,
+  promoTotalPrice,
+  normalTotalPrice,
   onSelectPackage,
   onSelectPayment,
   onContinue,
@@ -56,7 +60,7 @@ export default function PackageSelector({
               </p>
               <div className="mt-3 space-y-1">
                 <p className="text-sm font-bold text-white">
-                  {formatPrice(totalPrice)}
+                  {formatPrice(promoTotalPrice)}
                 </p>
                 <p className="text-[10px]" style={{ color: "#EAB308" }}>
                   Full payment required
@@ -79,7 +83,7 @@ export default function PackageSelector({
               </p>
               <div className="mt-3 space-y-1">
                 <p className="text-sm font-bold text-white">
-                  {formatPrice(selectedPricing ? selectedPricing.hourly_price * durationHours : totalPrice)}
+                  {formatPrice(normalTotalPrice)}
                 </p>
                 <p className="text-[10px]" style={{ color: "#22C55E" }}>
                   DP or Full payment
@@ -103,7 +107,7 @@ export default function PackageSelector({
           >
             <p className="text-sm font-bold text-white">Harga Normal</p>
             <p className="text-lg font-black mt-2" style={{ color: "#F5B700" }}>
-              {formatPrice(totalPrice)}
+              {formatPrice(normalTotalPrice)}
             </p>
           </button>
         </div>
@@ -127,7 +131,7 @@ export default function PackageSelector({
             >
               <p className="text-sm font-bold">Full</p>
               <p className="text-[10px] mt-0.5" style={{ color: selectedPayment === "FULL" ? "rgba(0,0,0,0.7)" : "#A1A1AA" }}>
-                {formatPrice(selectedPricing ? selectedPricing.hourly_price * durationHours : totalPrice)}
+                {formatPrice(normalTotalPrice)}
               </p>
             </button>
             <button

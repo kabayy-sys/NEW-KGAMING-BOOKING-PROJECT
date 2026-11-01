@@ -276,6 +276,8 @@ function BookingContent() {
             isPromoAvailable={flow.isPromoAvailable}
             durationHours={flow.durationHours}
             totalPrice={flow.totalPrice}
+            promoTotalPrice={flow.promoTotalPrice}
+            normalTotalPrice={flow.normalTotalPrice}
             onSelectPackage={flow.setSelectedPackage}
             onSelectPayment={flow.setSelectedPayment}
             onContinue={() => flow.goToStep(4)}
