@@ -49,27 +49,15 @@ export default function PackageSelector({
               }}
             >
               <p className="text-base font-bold" style={{ color: "#F5B700" }}>
-                🎉 Promo
+                🎉 Promo Happy Hour
               </p>
               <p className="text-xs mt-1" style={{ color: "#A1A1AA" }}>
-                Best value for your session
+                Special rate for weekday session
               </p>
               <div className="mt-3 space-y-1">
-                {durationHours === 2 && selectedPricing && (
-                  <p className="text-sm font-bold text-white">
-                    {formatPrice(selectedPricing.promo_2h_price)}
-                  </p>
-                )}
-                {durationHours === 3 && selectedPricing && (
-                  <p className="text-sm font-bold text-white">
-                    {formatPrice(selectedPricing.promo_3h_price)}
-                  </p>
-                )}
-                {durationHours >= 4 && (
-                  <p className="text-sm font-bold text-white">
-                    {formatPrice(totalPrice)} (20% off)
-                  </p>
-                )}
+                <p className="text-sm font-bold text-white">
+                  {formatPrice(totalPrice)}
+                </p>
                 <p className="text-[10px]" style={{ color: "#EAB308" }}>
                   Full payment required
                 </p>
@@ -91,7 +79,7 @@ export default function PackageSelector({
               </p>
               <div className="mt-3 space-y-1">
                 <p className="text-sm font-bold text-white">
-                  {formatPrice(totalPrice)}
+                  {formatPrice(selectedPricing ? selectedPricing.hourly_price * durationHours : totalPrice)}
                 </p>
                 <p className="text-[10px]" style={{ color: "#22C55E" }}>
                   DP or Full payment
@@ -139,7 +127,7 @@ export default function PackageSelector({
             >
               <p className="text-sm font-bold">Full</p>
               <p className="text-[10px] mt-0.5" style={{ color: selectedPayment === "FULL" ? "rgba(0,0,0,0.7)" : "#A1A1AA" }}>
-                {formatPrice(totalPrice)}
+                {formatPrice(selectedPricing ? selectedPricing.hourly_price * durationHours : totalPrice)}
               </p>
             </button>
             <button
@@ -153,7 +141,7 @@ export default function PackageSelector({
             >
               <p className="text-sm font-bold">DP</p>
               <p className="text-[10px] mt-0.5" style={{ color: selectedPayment === "DP" ? "rgba(0,0,0,0.7)" : "#A1A1AA" }}>
-                {formatPrice(selectedPricing?.hourly_price || 0)}
+                Min. 1 Jam ({formatPrice(selectedPricing?.hourly_price || 0)})
               </p>
             </button>
           </div>
@@ -164,13 +152,13 @@ export default function PackageSelector({
       <button
         onClick={onContinue}
         disabled={!selectedPackage || (selectedPackage === "NORMAL" && !selectedPayment)}
-        className="w-full min-h-[52px] rounded-xl font-bold text-base transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-3.5 rounded-xl font-bold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
           backgroundColor: selectedPackage && (selectedPackage === "PROMO" || selectedPayment) ? "#F5B700" : "#3F4452",
           color: selectedPackage && (selectedPackage === "PROMO" || selectedPayment) ? "#000" : "#6B7280",
         }}
       >
-        Continue
+        Lanjutkan ke Konfirmasi
       </button>
     </div>
   );
