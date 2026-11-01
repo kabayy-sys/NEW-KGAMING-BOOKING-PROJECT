@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { PricingRule } from "@/types/database";
-import { formatPrice } from "@/lib/utils";
 
 const staticPricing: PricingRule[] = [
   { id: "2", category: "VIP1", hourly_price: 30000, promo_2h_price: 55000, promo_3h_price: 80000, discount_4h_percent: 20, happy_hour_enabled: true, happy_hour_start: "10:00", happy_hour_end: "16:00", happy_hour_price: 25000, promo_days: [1,2,3,4,5], created_at: "", updated_at: "" },
@@ -21,7 +20,9 @@ export default function PricingPage() {
       try {
         const { data } = await supabase.from("pricing_rules").select("*");
         if (data && data.length > 0) setPricing(data);
-      } catch {} finally {
+      } catch {
+        // ignore fetch error
+      } finally {
         setLoading(false);
       }
     }
@@ -52,14 +53,15 @@ export default function PricingPage() {
           .eq("id", rule.id);
       }
       setMessage("Konfigurasi harga & Happy Hour berhasil disimpan!");
-    } catch (err: any) {
-      setMessage("Gagal menyimpan harga: " + (err.message || "Unknown error"));
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      setMessage("Gagal menyimpan harga: " + errorMsg);
     } finally {
       setSaving(false);
     }
   };
 
-  const updatePricing = (index: number, field: keyof PricingRule, value: any) => {
+  const updatePricing = (index: number, field: keyof PricingRule, value: unknown) => {
     setPricing((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
     );
