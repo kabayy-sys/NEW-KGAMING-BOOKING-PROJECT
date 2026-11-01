@@ -68,6 +68,11 @@ export interface PricingRule {
   promo_2h_price: number;
   promo_3h_price: number;
   discount_4h_percent: number;
+  happy_hour_enabled?: boolean;
+  happy_hour_start?: string;
+  happy_hour_end?: string;
+  happy_hour_price?: number;
+  promo_days?: number[];
   created_at: string;
   updated_at: string;
 }
