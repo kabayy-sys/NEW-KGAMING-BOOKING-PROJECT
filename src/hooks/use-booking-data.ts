@@ -112,9 +112,12 @@ export function useBookingData(selectedDate: string | null) {
           setData((prev) => ({ ...prev, settings: settingsRes.data }));
         }
 
-        // Disclaimers
+        // Disclaimers (deduplicate by sort_order)
         if (disclaimersRes.data && disclaimersRes.data.length > 0) {
-          setData((prev) => ({ ...prev, disclaimers: disclaimersRes.data }));
+          const uniqueDisclaimers = Array.from(
+            new Map(disclaimersRes.data.map((d: Disclaimer) => [d.sort_order, d])).values()
+          );
+          setData((prev) => ({ ...prev, disclaimers: uniqueDisclaimers }));
         }
 
         // Business hours
