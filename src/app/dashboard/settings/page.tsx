@@ -25,9 +25,11 @@ export default function SettingsPage() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const { data } = await supabase.from("settings").select("*").single();
+        const { data, error } = await supabase.from("settings").select("*").limit(1).maybeSingle();
         if (data) setSettings(data);
-      } catch {} finally {
+      } catch (err) {
+        console.error("fetchSettings error:", err);
+      } finally {
         setLoading(false);
       }
     }
@@ -39,17 +41,63 @@ export default function SettingsPage() {
     setMessage("");
 
     try {
-      await supabase.from("settings").upsert({
-        whatsapp_number: settings.whatsapp_number,
-        bank_name: settings.bank_name,
-        bank_account_number: settings.bank_account_number,
-        bank_account_holder: settings.bank_account_holder,
-        booking_expiration_minutes: settings.booking_expiration_minutes,
-        max_booking_days: settings.max_booking_days,
-      });
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(settings.id);
+      let result;
+
+      if (isUuid) {
+        result = await supabase
+          .from("settings")
+          .update({
+            whatsapp_number: settings.whatsapp_number,
+            bank_name: settings.bank_name,
+            bank_account_number: settings.bank_account_number,
+            bank_account_holder: settings.bank_account_holder,
+            booking_expiration_minutes: settings.booking_expiration_minutes,
+            max_booking_days: settings.max_booking_days,
+          })
+          .eq("id", settings.id);
+      } else {
+        const { data: existing } = await supabase.from("settings").select("id").limit(1).maybeSingle();
+        if (existing?.id) {
+          result = await supabase
+            .from("settings")
+            .update({
+              whatsapp_number: settings.whatsapp_number,
+              bank_name: settings.bank_name,
+              bank_account_number: settings.bank_account_number,
+              bank_account_holder: settings.bank_account_holder,
+              booking_expiration_minutes: settings.booking_expiration_minutes,
+              max_booking_days: settings.max_booking_days,
+            })
+            .eq("id", existing.id);
+          setSettings((prev) => ({ ...prev, id: existing.id }));
+        } else {
+          result = await supabase
+            .from("settings")
+            .insert({
+              whatsapp_number: settings.whatsapp_number,
+              bank_name: settings.bank_name,
+              bank_account_number: settings.bank_account_number,
+              bank_account_holder: settings.bank_account_holder,
+              booking_expiration_minutes: settings.booking_expiration_minutes,
+              max_booking_days: settings.max_booking_days,
+            })
+            .select("id")
+            .single();
+          if (result.data?.id) {
+            setSettings((prev) => ({ ...prev, id: result.data.id }));
+          }
+        }
+      }
+
+      if (result?.error) {
+        throw new Error(result.error.message);
+      }
+
       setMessage("Pengaturan berhasil disimpan!");
-    } catch {
-      setMessage("Gagal menyimpan pengaturan");
+    } catch (err: any) {
+      console.error("Save settings error:", err);
+      setMessage(err?.message ? `Gagal menyimpan pengaturan: ${err.message}` : "Gagal menyimpan pengaturan");
     } finally {
       setSaving(false);
     }

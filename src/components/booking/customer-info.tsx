@@ -82,7 +82,9 @@ export default function CustomerInfo({
           Terms & Conditions
         </h3>
         <ul className="space-y-2.5">
-          {disclaimers.map((d) => (
+          {disclaimers
+            .filter((d) => d.active !== false)
+            .map((d) => (
             <li
               key={d.id}
               className="text-xs flex items-start gap-2 leading-relaxed"

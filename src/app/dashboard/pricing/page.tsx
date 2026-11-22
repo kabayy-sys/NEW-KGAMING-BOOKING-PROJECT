@@ -45,24 +45,54 @@ export default function PricingPage() {
 
     try {
       for (const rule of pricing) {
-        await supabase
-          .from("pricing_rules")
-          .upsert({
-            id: rule.id,
-            category: rule.category,
-            hourly_price: rule.hourly_price,
-            promo_2h_price: rule.promo_2h_price,
-            promo_3h_price: rule.promo_3h_price,
-            discount_4h_percent: 0,
-            happy_hour_enabled: rule.happy_hour_enabled ?? false,
-            happy_hour_start: rule.happy_hour_start ?? "10:00",
-            happy_hour_end: rule.happy_hour_end ?? "16:00",
-            happy_hour_price: rule.happy_hour_price ?? 0,
-            promo_days: rule.promo_days ?? [1,2,3,4,5],
-          })
-          .eq("id", rule.id);
+      for (const rule of pricing) {
+        let result;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rule.id);
+
+        let targetId = isUuid ? rule.id : null;
+        if (!targetId) {
+          const { data: existing } = await supabase
+            .from("pricing_rules")
+            .select("id")
+            .eq("category", rule.category)
+            .maybeSingle();
+          if (existing?.id) targetId = existing.id;
+        }
+
+        const payload = {
+          category: rule.category,
+          hourly_price: rule.hourly_price,
+          promo_2h_price: rule.promo_2h_price,
+          promo_3h_price: rule.promo_3h_price,
+          discount_4h_percent: 0,
+          happy_hour_enabled: rule.happy_hour_enabled ?? false,
+          happy_hour_start: rule.happy_hour_start ?? "10:00",
+          happy_hour_end: rule.happy_hour_end ?? "16:00",
+          happy_hour_price: rule.happy_hour_price ?? 0,
+          promo_days: rule.promo_days ?? [1, 2, 3, 4, 5],
+        };
+
+        if (targetId) {
+          result = await supabase
+            .from("pricing_rules")
+            .update(payload)
+            .eq("id", targetId);
+        } else {
+          result = await supabase
+            .from("pricing_rules")
+            .insert(payload);
+        }
+
+        if (result?.error) {
+          throw new Error(result.error.message);
+        }
       }
+
       setMessage("Konfigurasi harga & Happy Hour berhasil disimpan!");
+
+      // Re-fetch pricing
+      const { data } = await supabase.from("pricing_rules").select("*");
+      if (data && data.length > 0) setPricing(data);
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       setMessage("Gagal menyimpan harga: " + errorMsg);

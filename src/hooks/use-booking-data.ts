@@ -85,8 +85,8 @@ export function useBookingData(selectedDate: string | null) {
         const [devicesRes, pricingRes, settingsRes, disclaimersRes, hoursRes] = await Promise.all([
           supabase.from("devices").select("*").eq("active", true).order("name"),
           supabase.from("pricing_rules").select("*"),
-          supabase.from("settings").select("*").single(),
-          supabase.from("disclaimers").select("*").order("sort_order"),
+          supabase.from("settings").select("*").limit(1).maybeSingle(),
+          supabase.from("disclaimers").select("*").eq("active", true).order("sort_order"),
           supabase.from("business_hours").select("*"),
         ]);
 

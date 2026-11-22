@@ -47,16 +47,41 @@ export default function HoursPage() {
 
     try {
       for (const h of hours) {
-        await supabase.from("business_hours").upsert({
-          day_name: h.day,
-          open_time: h.open + ":00",
-          close_time: h.close + ":00",
-          active: true,
-        });
+        const { data: existing } = await supabase
+          .from("business_hours")
+          .select("id")
+          .eq("day_name", h.day)
+          .maybeSingle();
+
+        let res;
+        if (existing?.id) {
+          res = await supabase
+            .from("business_hours")
+            .update({
+              open_time: h.open.length === 5 ? h.open + ":00" : h.open,
+              close_time: h.close.length === 5 ? h.close + ":00" : h.close,
+              active: true,
+            })
+            .eq("id", existing.id);
+        } else {
+          res = await supabase
+            .from("business_hours")
+            .insert({
+              day_name: h.day,
+              open_time: h.open.length === 5 ? h.open + ":00" : h.open,
+              close_time: h.close.length === 5 ? h.close + ":00" : h.close,
+              active: true,
+            });
+        }
+
+        if (res?.error) {
+          throw new Error(res.error.message);
+        }
       }
       setMessage("Jam operasional berhasil disimpan!");
-    } catch {
-      setMessage("Gagal menyimpan jam operasional");
+    } catch (err: any) {
+      console.error("Save hours error:", err);
+      setMessage(err?.message ? `Gagal menyimpan jam operasional: ${err.message}` : "Gagal menyimpan jam operasional");
     } finally {
       setSaving(false);
     }
