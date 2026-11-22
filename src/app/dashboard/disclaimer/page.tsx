@@ -50,7 +50,11 @@ export default function DisclaimerPage() {
         console.error("Error fetching disclaimers:", error);
         setDisclaimers(staticDisclaimers);
       } else if (data && data.length > 0) {
-        setDisclaimers(data);
+        // Otomatis deduplikasi berdasarkan sort_order jika ada data ganda di DB
+        const unique = Array.from(
+          new Map(data.map((d: Disclaimer) => [d.sort_order, d])).values()
+        );
+        setDisclaimers(unique);
       } else {
         setDisclaimers(staticDisclaimers);
       }
