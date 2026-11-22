@@ -130,7 +130,7 @@ export default function DisclaimerPage() {
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editingDisclaimer.id);
 
-      let result;
+      let result: any;
       if (isUuid) {
         result = await supabase
           .from("disclaimers")
@@ -176,7 +176,7 @@ export default function DisclaimerPage() {
     );
 
     try {
-      let result;
+      let result: any;
       if (isUuid) {
         result = await supabase
           .from("disclaimers")
@@ -235,7 +235,7 @@ export default function DisclaimerPage() {
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(deletingDisclaimer.id);
 
-      let result;
+      let result: any;
       if (isUuid) {
         result = await supabase.from("disclaimers").delete().eq("id", deletingDisclaimer.id);
       } else {

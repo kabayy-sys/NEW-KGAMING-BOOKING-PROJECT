@@ -42,7 +42,7 @@ export default function SettingsPage() {
 
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(settings.id);
-      let result;
+      let result: any;
 
       if (isUuid) {
         result = await supabase

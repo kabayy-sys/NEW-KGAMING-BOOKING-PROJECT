@@ -53,7 +53,7 @@ export default function HoursPage() {
           .eq("day_name", h.day)
           .maybeSingle();
 
-        let res;
+        let res: any;
         if (existing?.id) {
           res = await supabase
             .from("business_hours")

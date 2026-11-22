@@ -45,7 +45,7 @@ export default function PricingPage() {
 
     try {
       for (const rule of pricing) {
-        let result;
+        let result: any;
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rule.id);
 
         let targetId = isUuid ? rule.id : null;
