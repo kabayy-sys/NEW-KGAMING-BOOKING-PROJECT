@@ -114,8 +114,8 @@ export function useBookingData(selectedDate: string | null) {
 
         // Disclaimers (deduplicate by sort_order)
         if (disclaimersRes.data && disclaimersRes.data.length > 0) {
-          const uniqueDisclaimers = Array.from(
-            new Map(disclaimersRes.data.map((d: Disclaimer) => [d.sort_order, d])).values()
+          const uniqueDisclaimers: Disclaimer[] = Array.from(
+            new Map<number, Disclaimer>(disclaimersRes.data.map((d: Disclaimer) => [d.sort_order, d])).values()
           );
           setData((prev) => ({ ...prev, disclaimers: uniqueDisclaimers }));
         }

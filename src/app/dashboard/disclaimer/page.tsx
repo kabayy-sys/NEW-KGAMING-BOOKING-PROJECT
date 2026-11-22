@@ -51,8 +51,8 @@ export default function DisclaimerPage() {
         setDisclaimers(staticDisclaimers);
       } else if (data && data.length > 0) {
         // Otomatis deduplikasi berdasarkan sort_order jika ada data ganda di DB
-        const unique = Array.from(
-          new Map(data.map((d: Disclaimer) => [d.sort_order, d])).values()
+        const unique: Disclaimer[] = Array.from(
+          new Map<number, Disclaimer>(data.map((d: Disclaimer) => [d.sort_order, d])).values()
         );
         setDisclaimers(unique);
       } else {
